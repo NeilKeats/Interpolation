@@ -258,6 +258,8 @@ void bicubic_spline_coeff(const float *f_data, float * coeff, DWORD s_weight, DW
 }
 
 void fill_data(const char* s_data, float * f_data, DWORD s_weight, DWORD s_hight) {
+//将原 w*h 大小的图像 填充到 (w+4) * (h+4)中，即上下左右增加了两行数据。
+//原边界外的元素的值用近邻元素的像素值代替
 	DWORD f_weight = s_weight + 4;
 	DWORD f_hight = s_hight +4 ;
 
@@ -282,6 +284,8 @@ void fill_data(const char* s_data, float * f_data, DWORD s_weight, DWORD s_hight
 }
 
 void interpolation(const char *s_data, char *d_data, DWORD s_weight, DWORD s_hight, int weight_scale, int hight_scale, int MODE) {
+	//prefix: d for destination  image; s for source image
+	//
 	if (weight_scale <= 1 || hight_scale <= 1)
 		return;
 	DWORD d_weight = s_weight * weight_scale;
@@ -302,15 +306,21 @@ void interpolation(const char *s_data, char *d_data, DWORD s_weight, DWORD s_hig
 		bicubic_spline_coeff(f_data, coeff, s_weight, s_hight);
 
 	char *output = d_data;
-	//output = (char *)malloc(sizeof(char)*d_weight*d_hight);
 	float s_x, s_y;
+	//is_x  int s_x;  is_y  int s_y
 	int is_x, is_y;
 	float temp;
 	for (int i = 0; i < d_hight; ++i) {
+		//coefficient array obtained from the left corner element.
+		//for y, using ceil(),causes our image data start from left bottom
+		//for x, using floor()
+
+		//source y -> destination y
 		s_y = (float)i / (float)(d_hight - 1) * (float)(s_hight - 1);
 		is_y = ceil(s_y);
 		is_y = is_y <= 0 ? 1 : is_y;
 		for (int j = 0; j < d_weight; ++j) {
+			//source x -> destination x
 			s_x = (float)j / (float)(d_weight - 1) * (float)(s_weight - 1);
 			
 			is_x = floor(s_x);
