@@ -142,9 +142,16 @@ void bicubic_coeff(const float *f_data, float * coeff, DWORD s_weight, DWORD s_h
 
 }
 
-float cal_bicubic(float *local_coeff, float s_x, float s_y) {
+float cal_bicubic(float *local_coeff, float x, float y) {
+	/*
 	float x = s_x - floor(s_x);
-	float y = ceil(s_y) - s_y;
+	float y;
+	if (s_y <= 0.0)
+		y = 1.0;
+	else
+		y = ceil(s_y) - s_y;
+	*/
+
 	float p_x[4],temp[4];
 	/*
 	p_x[0] = 1;
@@ -283,10 +290,10 @@ void fill_data(const char* s_data, float * f_data, DWORD s_weight, DWORD s_hight
 		}
 }
 
-void interpolation(const char *s_data, char *d_data, DWORD s_weight, DWORD s_hight, int weight_scale, int hight_scale, int MODE) {
+void interpolation(const char *s_data, char *d_data, DWORD s_weight, DWORD s_hight, float weight_scale, float hight_scale, int MODE) {
 	//prefix: d for destination  image; s for source image
 	//
-	if (weight_scale <= 1 || hight_scale <= 1)
+	if (weight_scale <= 0 || hight_scale <= 0)
 		return;
 	DWORD d_weight = s_weight * weight_scale;
 	DWORD d_hight = s_hight * hight_scale;
@@ -320,13 +327,18 @@ void interpolation(const char *s_data, char *d_data, DWORD s_weight, DWORD s_hig
 		is_y = ceil(s_y);
 		is_y = is_y <= 0 ? 1 : is_y;
 		for (int j = 0; j < d_weight; ++j) {
+			if (j > 128) {
+				int xx = 0;
+				xx++;
+			}
+
 			//destination x -> source x
 			s_x = (float)j / (float)(d_weight - 1) * (float)(s_weight - 1);
 			
 			is_x = floor(s_x);
-			is_x = is_x >= d_weight-1? d_weight - 2:is_x;
+			is_x = is_x >= s_weight-1? s_weight - 2:is_x;
 			
-			temp = cal_bicubic(coeff + (is_y*s_weight + is_x) * 16, s_x, s_y);
+			temp = cal_bicubic(coeff + (is_y*s_weight + is_x) * 16, s_x-(float)is_x, float(is_y) - s_y);
 			output[i*d_weight + j] = (char)temp;
 		}
 	}

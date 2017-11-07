@@ -19,6 +19,6 @@ void bicubic_spline_coeff(const float *f_data, float * coeff, DWORD s_weight, DW
 
 void fill_data(const char* s_data, float * f_data, DWORD s_weight, DWORD s_hight);
 
-void interpolation(const char *s_data, char *d_data, DWORD s_weight, DWORD s_hight, int weight_scale, int hight_scale, int MODE);
+void interpolation(const char *s_data, char *d_data, DWORD s_weight, DWORD s_hight, float weight_scale, float hight_scale, int MODE);
 
 #endif // !1

@@ -58,8 +58,10 @@ void main()
 	char *tmp = OutImage.table;
 	OutImage.table = (char* )malloc(OutImage.bf.bfOffBits-54);
 	memcpy(OutImage.table,tmp, OutImage.bf.bfOffBits - 54);
-	interpolation(inImage.buf, OutImage.buf, inImage.w, inImage.h, SCALERATE, SCALERATE, MODE_SPLINE);
-	FILE *fpw = fopen("TestOutputx1_spline.bmp","wb");
+	interpolation(	inImage.buf, OutImage.buf, 
+					inImage.w, inImage.h, 
+					SCALERATE, SCALERATE, MODE_SPLINE);
+	FILE *fpw = fopen("TestOutputx1_spline_point5.bmp","wb");
 	OutImage.write_image(fpw);
 	//inImage.write_image(fpw);
 	fclose(fpw);

@@ -28,7 +28,7 @@ public:
 		free(table);
 	}
 	void write_image(FILE *fpw);
-	void resize(int scale);
+	void resize(float scale);
 };
 
 bmp_i::bmp_i(FILE *fp) {
@@ -69,9 +69,9 @@ void bmp_i::write_image(FILE *fpw) {
 	}
 };
 
-void bmp_i::resize(int scale) {
+void bmp_i::resize(float scale) {
 
-	if (scale < 1)
+	if (scale <= 0)
 		return;
 	this->bi.biWidth = this->bi.biWidth*scale;
 	this->w = this->bi.biWidth;
