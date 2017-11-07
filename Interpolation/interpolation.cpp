@@ -40,11 +40,12 @@ void gradientX(const float *f_data, float * dx, float *dbuffer, DWORD weight, DW
 	const DWORD local_weight = weight + 4;
 	for(int i= 0; i<hight+4;++i)
 		for (int j = 2; j < weight + 2; ++j) {
-			dbuffer[local_weight * i + j] =	  2.0 / 3 * f_data[local_weight * i + j + 1] 
-											- 1.0 / 12 * f_data[local_weight * i + j + 2]
-											- 2.0 / 3 * f_data[local_weight * i + j -1]
-											+ 1.0 / 12 * f_data[local_weight * i + j -2 ];
-		}
+			dbuffer[local_weight * i + j] =	 
+				2.0 / 3 * f_data[local_weight * i + j + 1] 
+				- 1.0 / 12 * f_data[local_weight * i + j + 2]
+				- 2.0 / 3 * f_data[local_weight * i + j -1]
+				+ 1.0 / 12 * f_data[local_weight * i + j -2 ];
+		}	
 
 	for(int i=0; i<hight; ++i)
 		for (int j = 0; j < weight; ++j) {
@@ -58,10 +59,11 @@ void gradientY(const float *f_data, float * dy, float *dbuffer, DWORD weight, DW
 	const DWORD local_weight = weight + 4;
 	for( int i =2 ; i< hight+2 ; ++i)
 		for (int j = 0; j < weight; ++j) {
-			dbuffer[local_weight * i + j] =   2.0 / 3 * f_data[local_weight * (i - 1 ) + j ]
-											- 1.0 / 12 * f_data[local_weight * (i - 2 ) + j ]
-											- 2.0 / 3 * f_data[local_weight * (i + 1 ) + j ]
-											+ 1.0 / 12 * f_data[local_weight * (i + 2 ) + j ];
+			dbuffer[local_weight * i + j] =   
+				2.0 / 3 * f_data[local_weight * (i - 1 ) + j ]
+				- 1.0 / 12 * f_data[local_weight * (i - 2 ) + j ]
+				- 2.0 / 3 * f_data[local_weight * (i + 1 ) + j ]
+				+ 1.0 / 12 * f_data[local_weight * (i + 2 ) + j ];
 		}
 
 	for (int i = 0; i<hight; ++i)
