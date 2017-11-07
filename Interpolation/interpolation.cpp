@@ -315,12 +315,12 @@ void interpolation(const char *s_data, char *d_data, DWORD s_weight, DWORD s_hig
 		//for y, using ceil(),causes our image data start from left bottom
 		//for x, using floor()
 
-		//source y -> destination y
+		//destination y ->  source y
 		s_y = (float)i / (float)(d_hight - 1) * (float)(s_hight - 1);
 		is_y = ceil(s_y);
 		is_y = is_y <= 0 ? 1 : is_y;
 		for (int j = 0; j < d_weight; ++j) {
-			//source x -> destination x
+			//destination x -> source x
 			s_x = (float)j / (float)(d_weight - 1) * (float)(s_weight - 1);
 			
 			is_x = floor(s_x);
