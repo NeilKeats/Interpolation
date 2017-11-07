@@ -6,6 +6,7 @@
 
 #define MODE_BICUBIC 0x00
 #define MODE_SPLINE 0x0F
+#define MODE_NEIGHBOUR 0xF0
 
 void gradientX(const float *Imdata, float * dx, float *dbuffer, DWORD weight, DWORD hight);
 
@@ -13,7 +14,7 @@ void gradientY(const float *Imdata, float * dx, float *dbuffer, DWORD weight, DW
 
 void bicubic_coeff(const float *Imdata,float * coeff, DWORD weight, DWORD hight);
 
-float cal_bicubic(float *coeff,float s_x, float s_y);
+float cal_bicubic(float *coeff, float s_x, float s_y, DWORD s_weight, DWORD s_hight);
 
 void bicubic_spline_coeff(const float *f_data, float * coeff, DWORD s_weight, DWORD s_hight);
 

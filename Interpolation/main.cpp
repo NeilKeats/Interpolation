@@ -60,7 +60,7 @@ void main()
 	memcpy(OutImage.table,tmp, OutImage.bf.bfOffBits - 54);
 	interpolation(	inImage.buf, OutImage.buf, 
 					inImage.w, inImage.h, 
-					SCALERATE, SCALERATE, MODE_SPLINE);
+					SCALERATE, SCALERATE, MODE_BICUBIC);
 	FILE *fpw = fopen("TestOutputx1_spline_point5.bmp","wb");
 	OutImage.write_image(fpw);
 	//inImage.write_image(fpw);

@@ -142,16 +142,23 @@ void bicubic_coeff(const float *f_data, float * coeff, DWORD s_weight, DWORD s_h
 
 }
 
-float cal_bicubic(float *local_coeff, float x, float y) {
-	/*
-	float x = s_x - floor(s_x);
-	float y;
-	if (s_y <= 0.0)
-		y = 1.0;
-	else
-		y = ceil(s_y) - s_y;
-	*/
+float cal_bicubic(float *coeff, float s_x, float s_y, DWORD s_weight, DWORD s_hight) {
+	//coefficient array obtained from the left corner element.
+	//for y, using ceil(),causes our image data start from left bottom
+	//for x, using floor()
 
+	//is_x  int s_x;  is_y  int s_y
+	int is_y, is_x,x,y;
+	is_y = ceil(s_y);
+	is_y = is_y <= 0 ? 1 : is_y;
+	y = (float)is_y - s_y;
+
+	is_x = floor(s_x);
+	is_x = is_x >= s_weight - 1 ? s_weight - 2 : is_x;
+	x = s_x - (float)is_x;
+
+	float *local_coeff = coeff + (is_y*s_weight + is_x) * 16;
+	
 	float p_x[4],temp[4];
 	/*
 	p_x[0] = 1;
@@ -314,31 +321,16 @@ void interpolation(const char *s_data, char *d_data, DWORD s_weight, DWORD s_hig
 
 	char *output = d_data;
 	float s_x, s_y;
-	//is_x  int s_x;  is_y  int s_y
-	int is_x, is_y;
 	float temp;
 	for (int i = 0; i < d_hight; ++i) {
-		//coefficient array obtained from the left corner element.
-		//for y, using ceil(),causes our image data start from left bottom
-		//for x, using floor()
 
 		//destination y ->  source y
 		s_y = (float)i / (float)(d_hight - 1) * (float)(s_hight - 1);
-		is_y = ceil(s_y);
-		is_y = is_y <= 0 ? 1 : is_y;
 		for (int j = 0; j < d_weight; ++j) {
-			if (j > 128) {
-				int xx = 0;
-				xx++;
-			}
-
 			//destination x -> source x
 			s_x = (float)j / (float)(d_weight - 1) * (float)(s_weight - 1);
 			
-			is_x = floor(s_x);
-			is_x = is_x >= s_weight-1? s_weight - 2:is_x;
-			
-			temp = cal_bicubic(coeff + (is_y*s_weight + is_x) * 16, s_x-(float)is_x, float(is_y) - s_y);
+			temp = cal_bicubic(coeff, s_x , s_y , s_weight, s_hight);
 			output[i*d_weight + j] = (char)temp;
 		}
 	}
