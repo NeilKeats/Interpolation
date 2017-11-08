@@ -8,85 +8,69 @@
 #include "interpolation.h"
 using namespace std;
 
-#define SCALERATE 2
+#define SCALERATE 2.0
+#define WIDTH_SCALERATE 4.0
+#define HEIGHT_SCALERATE 1.0
+
+
+const string inputDir = 
+	"D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\INPUT\\";
+const string outputDir =
+	"D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\OUTPUT1\\";
+const string inFileName = 
+	"mr";
+const string postfix = ".bmp";
+
+
+
+void test(const bmp_i *inImage) {
+	bmp_i OutImage(inImage);
+	OutImage.resize(WIDTH_SCALERATE, HEIGHT_SCALERATE);
+
+	for (int i = 0; i<5; ++i){
+		interpolation(
+			inImage->buf, OutImage.buf,
+			inImage->w, inImage->h,
+			WIDTH_SCALERATE, HEIGHT_SCALERATE, A_MODE[i]);
+		string outputfile = outputDir + inFileName + string("_") + MODE_NAME[i] + postfix;
+		bmp_file_write(&OutImage, outputfile.c_str());
+	}
+};
+
 void main()
 {
-	//char fileName[48];
-	//const char *fileName = "D:\\Projects\\test.bmp";
-	//const char *fileName = "D:\\Projects\\data\\dic challenge12\\crop_oht_cfrp_0.bmp";
-	const char *fileName = "D:\\Projects\\lena512.bmp";
-	const char *bufferName = "D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\OUTPUT\\buffer.txt";
-	FILE *fp = nullptr;
-	int r, g, b, pix;
 
-	//cout << "请输入要打开文件的名字：";
-	//cin >> fileName;
-	if ((fp = fopen(fileName, "rb")) == NULL)
-	{
-		cout << "文件未找到！";
-		exit(0);
-	}
+	FILE *fp = nullptr, *fpw = nullptr;
+	
+	string inputfile = inputDir + inFileName + postfix;
 
-	bmp_i inImage(fp); 
+	bmp_i *inImage = nullptr;
+	inImage = bmp_file_read(inputfile.c_str());
+	if (inImage == nullptr)
+		exit(1);
 
-	fclose(fp);
-
-	//show image
+	//converte to gray
 	/*
-	HWND wnd;                                 //窗口句柄  
-	HDC dc;                                   //绘图设备环境句柄
-	wnd = GetForegroundWindow();               //获取窗口句柄  
-	dc = GetDC(wnd);                           //获取绘图设备  
-	int x = 40;
-	int y = 40;
-	char *p = inImage.buf;
-	for (int j = 0; j<inImage.h; j++)
-	{
-		for (int i = 0; i<inImage.w; i++)
-		{
-			//b = *p++; g = *p++; r = *p++;
-			b = *p++;
-			g = r = b;
-			pix = RGB(r, g, b);
-			SetPixel(dc, x + i, y + inImage.h - j, pix);
-		}
-	}
+	inImage.converte_to_gray();
+	FILE *fpw = fopen("D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\OUTPUT\\test.bmp", "wb");
+	inImage.write_image(fpw);
+	fclose(fpw);
+	return;
 	*/
 
-	bmp_i OutImage = inImage;
-	OutImage.buf = nullptr;
-	OutImage.resize(SCALERATE);
-	uint8_t *tmp = OutImage.table;
-	OutImage.table = (uint8_t* )malloc(OutImage.bf.bfOffBits-54);
-	memcpy(OutImage.table,tmp, OutImage.bf.bfOffBits - 54);
-	interpolation(	(uint8_t*)inImage.buf, OutImage.buf,
-					inImage.w, inImage.h, 
-					SCALERATE, SCALERATE, MODE_NEAREST_NEIGHBOUR);
-	FILE *fpw = fopen("D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\OUTPUT\\test.bmp","wb");
-	OutImage.write_image(fpw);
-	//OutImage.write_buffer(bufferName);
-	//inImage.write_image(fpw);
-	fclose(fpw);
 
 	/*
-	x = 40;
-	y = 340;
-	p = OutImage.buf;
-	for (int j = 0; j<OutImage.h; j++)
-	{
-		for (int i = 0; i<OutImage.w; i++)
-		{
-			//b = *p++; g = *p++; r = *p++;  D:\Projects\test.bmp
-			b = *p++;
-			g = r = b;
-			pix = RGB(r, g, b);
-			SetPixel(dc, x + i, y + OutImage.h - j, pix);
-		}
-	}*/
+	bmp_i OutImage(inImage);
+	OutImage.resize(SCALERATE, SCALERATE);
+	for(int i=0;i<5;++i)
+	interpolation(	inImage->buf, OutImage.buf,
+					inImage->w, inImage->h, 
+					SCALERATE, SCALERATE, A_MODE[i]);
+	bmp_file_write(&OutImage,outputName);
+	*/
+	test(inImage);
 
-	//system("pause");
-		//write image
+	delete inImage;
+	system("pause");
 
-
-	//return fp;  
 }

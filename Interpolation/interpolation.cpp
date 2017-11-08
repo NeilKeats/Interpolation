@@ -5,7 +5,11 @@
 #include<stdio.h>  
 #include<string.h> 
 #include<math.h>
+#include<time.h>
 //#include<cmath>
+
+#define TIME_COUNT
+
 const float M_PI=3.14159265358979f;
 
 static float m_dBicubicMatrix[16][16] = { 
@@ -60,81 +64,81 @@ inline float lanczos_conv_kernel(float a, float x) {
 		return 0;
 }
 
-void gradientX(const float *f_data, float * dx, float *dbuffer, DWORD weight, DWORD hight) {
-	const DWORD local_weight = weight + 4;
-	for(int i= 0; i<hight+4;++i)
-		for (int j = 2; j < weight + 2; ++j) {
-			dbuffer[local_weight * i + j] =	 
-				2.0 / 3 * f_data[local_weight * i + j + 1] 
-				- 1.0 / 12 * f_data[local_weight * i + j + 2]
-				- 2.0 / 3 * f_data[local_weight * i + j -1]
-				+ 1.0 / 12 * f_data[local_weight * i + j -2 ];
+void gradientX(const float *f_data, float * dx, float *dbuffer, DWORD width, DWORD height) {
+	const DWORD local_width = width + 4;
+	for(int i= 0; i<height+4;++i)
+		for (int j = 2; j < width + 2; ++j) {
+			dbuffer[local_width * i + j] =	 
+				2.0 / 3 * f_data[local_width * i + j + 1] 
+				- 1.0 / 12 * f_data[local_width * i + j + 2]
+				- 2.0 / 3 * f_data[local_width * i + j -1]
+				+ 1.0 / 12 * f_data[local_width * i + j -2 ];
 		}	
 
-	for(int i=0; i<hight; ++i)
-		for (int j = 0; j < weight; ++j) {
+	for(int i=0; i<height; ++i)
+		for (int j = 0; j < width; ++j) {
 			int row = i + 2;
 			int col = j + 2;
-			dx[i*weight + j] = dbuffer[row*local_weight+col];
+			dx[i*width + j] = dbuffer[row*local_width+col];
 		}
 }
 
-void gradientY(const float *f_data, float * dy, float *dbuffer, DWORD weight, DWORD hight) {
-	const DWORD local_weight = weight + 4;
-	for( int i =2 ; i< hight+2 ; ++i)
-		for (int j = 0; j < weight; ++j) {
-			dbuffer[local_weight * i + j] =   
-				2.0 / 3 * f_data[local_weight * (i - 1 ) + j ]
-				- 1.0 / 12 * f_data[local_weight * (i - 2 ) + j ]
-				- 2.0 / 3 * f_data[local_weight * (i + 1 ) + j ]
-				+ 1.0 / 12 * f_data[local_weight * (i + 2 ) + j ];
+void gradientY(const float *f_data, float * dy, float *dbuffer, DWORD width, DWORD height) {
+	const DWORD local_width = width + 4;
+	for( int i =2 ; i< height+2 ; ++i)
+		for (int j = 0; j < width + 4 ; ++j) {
+			dbuffer[local_width * i + j] =   
+				2.0 / 3 * f_data[local_width * (i - 1 ) + j ]
+				- 1.0 / 12 * f_data[local_width * (i - 2 ) + j ]
+				- 2.0 / 3 * f_data[local_width * (i + 1 ) + j ]
+				+ 1.0 / 12 * f_data[local_width * (i + 2 ) + j ];
 		}
 
-	for (int i = 0; i<hight; ++i)
-		for (int j = 0; j < weight; ++j) {
+	for (int i = 0; i<height; ++i)
+		for (int j = 0; j < width; ++j) {
 			int row = i + 2;
 			int col = j + 2;
-			dy[i*weight + j] = dbuffer[row*local_weight + col];
+			dy[i*width + j] = dbuffer[row*local_width + col];
 		}
 }
 
-void bicubic_coeff(const float *f_data, float * coeff, DWORD s_weight, DWORD s_hight){
+void bicubic_coeff(const float *f_data, float * coeff, DWORD s_width, DWORD s_height){
 	
 	float *dx, *dy, *dxy,*d_buffx, *d_buffy;
-	dx = (float*)malloc(sizeof(float)*s_weight*s_hight);
-	dy = (float*)malloc(sizeof(float)*s_weight*s_hight);
-	dxy = (float*)malloc(sizeof(float)*s_weight*s_hight);
-	d_buffx = (float*)malloc(sizeof(float)*(s_weight + 4)*(s_hight + 4));
-	d_buffy = (float*)malloc(sizeof(float)*(s_weight + 4)*(s_hight + 4));
+	dx = (float*)malloc(sizeof(float)*s_width*s_height);
+	dy = (float*)malloc(sizeof(float)*s_width*s_height);
+	dxy = (float*)malloc(sizeof(float)*s_width*s_height);
+	d_buffx = (float*)malloc(sizeof(float)*(s_width + 4)*(s_height + 4));
+	d_buffy = (float*)malloc(sizeof(float)*(s_width + 4)*(s_height + 4));
 
-	gradientY(f_data, dy, d_buffy, s_weight, s_hight);
-	gradientX(f_data, dx, d_buffx, s_weight, s_hight);
-	gradientY(d_buffx, dxy, d_buffy, s_weight, s_hight);
+	gradientY(f_data, dy, d_buffy, s_width, s_height);
+	gradientX(f_data, dx, d_buffx, s_width, s_height);
+	gradientY(d_buffx, dxy, d_buffy, s_width, s_height);
 
 	float dTao[16], dAlpha[16];
 
-	for(int i = 1 ; i<s_hight ; ++i ){
-		for (int j = 0; j < s_weight - 1; ++j) {
-			dTao[0] = f_data[(i + 2)*(s_weight + 4) + j + 2];
-			dTao[1] = f_data[(i + 2)*(s_weight + 4) + j + 3];
-			dTao[2] = f_data[(i + 1)*(s_weight + 4) + j + 2];
-			dTao[3] = f_data[(i + 1)*(s_weight + 4) + j + 3];
+	for(int i = 1 ; i<s_height ; ++i ){
+		for (int j = 0; j < s_width-1 ; ++j) {
+			dTao[0] = f_data[(i + 2)*(s_width + 4) + j + 2];
+			dTao[1] = f_data[(i + 2)*(s_width + 4) + j + 3];
+			dTao[2] = f_data[(i + 1)*(s_width + 4) + j + 2];
+			dTao[3] = f_data[(i + 1)*(s_width + 4) + j + 3];
 
 			
-			dTao[4] = dx[(i)*s_weight  + j ];
-			dTao[5] = dx[(i)*s_weight  + j + 1];
-			dTao[6] = dx[(i - 1)*s_weight  + j ];
-			dTao[7] = dx[(i - 1)*s_weight  + j + 1 ];
+			dTao[4] = dx[(i)*s_width  + j ];
+			dTao[5] = dx[(i)*s_width  + j + 1];
+			dTao[6] = dx[(i - 1)*s_width  + j ];
+			dTao[7] = dx[(i - 1)*s_width  + j + 1 ];
 
-			dTao[8] = dy[(i)*s_weight + j ];
-			dTao[9] = dy[(i)*s_weight + j + 1];
-			dTao[10] = dy[(i - 1)*s_weight + j];
-			dTao[11] = dy[(i - 1)*s_weight + j + 1];
+			dTao[8] = dy[(i)*s_width + j ];
+			dTao[9] = dy[(i)*s_width + j + 1];
+			dTao[10] = dy[(i - 1)*s_width + j];
+			dTao[11] = dy[(i - 1)*s_width + j + 1];
 			
-			dTao[12] = dxy[(i)*s_weight + j ];
-			dTao[13] = dxy[(i)*s_weight + j + 1];
-			dTao[14] = dxy[(i - 1)*s_weight + j];
-			dTao[15] = dxy[(i - 1)*s_weight + j + 1];
+			dTao[12] = dxy[(i)*s_width + j ];
+			dTao[13] = dxy[(i)*s_width + j + 1];
+			dTao[14] = dxy[(i - 1)*s_width + j];
+			dTao[15] = dxy[(i - 1)*s_width + j + 1];
 			
 			/*
 			dTao[4] = dTao[5] = dTao[6] = dTao[7] = 0;
@@ -151,7 +155,7 @@ void bicubic_coeff(const float *f_data, float * coeff, DWORD s_weight, DWORD s_h
 				}
 			}
 
-			float *fBicubic = coeff + ((i*s_weight) + j) * 16;
+			float *fBicubic = coeff + ((i*s_width) + j) * 16;
 			for (int i = 0; i < 16; i++)
 				fBicubic[i] = dAlpha[i];
 
@@ -166,21 +170,21 @@ void bicubic_coeff(const float *f_data, float * coeff, DWORD s_weight, DWORD s_h
 
 }
 
-void bicubic_spline_coeff(const float *f_data, float * coeff, DWORD s_weight, DWORD s_hight) {
+void bicubic_spline_coeff(const float *f_data, float * coeff, DWORD s_width, DWORD s_height) {
 
 	int i, j, k, l, m, n;
 	float  Omiga[4][4], Beta[4][4];
 
-	for (i = 0; i < s_hight; ++i) {
-		for (j = 0; j < s_weight; ++j) {
-			float *local_coeff = coeff + (i*s_weight + j) * 16;
+	for (i = 0; i < s_height; ++i) {
+		for (j = 0; j < s_width; ++j) {
+			float *local_coeff = coeff + (i*s_width + j) * 16;
 
 			//store neighbour value into Omeiga
 			for (k = 0; k < 4; ++k)
 				for (l = 0; l < 4; ++l)
 					//reflect to original data (i + 1 - k, j - 1 + l)
 					//reflect to filled data (i + 1 -k +2 , j - 1 +l +2)
-					Omiga[k][l] = f_data[(i + 1 - k + 2)*(s_weight + 4) + (j - 1 + l + 2)];
+					Omiga[k][l] = f_data[(i + 1 - k + 2)*(s_width + 4) + (j - 1 + l + 2)];
 
 			//Beta
 			for (k = 0; k < 4; k++)
@@ -239,7 +243,7 @@ void bicubic_spline_coeff(const float *f_data, float * coeff, DWORD s_weight, DW
 
 }
 
-float cal_bicubic(float *coeff, float s_x, float s_y, DWORD s_weight, DWORD s_hight) {
+float cal_bicubic(float *coeff, float s_x, float s_y, DWORD s_width, DWORD s_height) {
 	//coefficient array obtained from the left corner element.
 	//for y, using ceil(),causes our image data start from left bottom
 	//for x, using floor()
@@ -253,11 +257,13 @@ float cal_bicubic(float *coeff, float s_x, float s_y, DWORD s_weight, DWORD s_hi
 	y = (float)is_y - s_y;
 
 	is_x = floor(s_x);
-	is_x = is_x >= s_weight - 1 ? s_weight - 2 : is_x;
-	//is_x = is_x >= s_weight - 1 ? s_weight - 1 : is_x;
+	if (s_x >= s_width -1 )
+		is_x = is_x;
+	is_x = is_x >= s_width - 1 ? s_width - 2 : is_x;
+	//is_x = is_x >= s_width - 1 ? s_width - 1 : is_x;
 	x = s_x - (float)is_x;
 
-	float *local_coeff = coeff + (is_y*s_weight + is_x) * 16;
+	float *local_coeff = coeff + (is_y*s_width + is_x) * 16;
 	
 	float p_x[4],temp[4];
 	/*
@@ -301,7 +307,7 @@ float cal_bicubic(float *coeff, float s_x, float s_y, DWORD s_weight, DWORD s_hi
 	return result;
 }
 
-float cal_bicubic_kernel(const float *f_data, float s_x, float s_y, DWORD s_weight, DWORD s_hight, float a, int MODE) {
+float cal_bicubic_kernel(const float *f_data, float s_x, float s_y, DWORD s_width, DWORD s_height, float a, int MODE) {
 	int is_y, is_x;
 	float x, y;
 	is_y = ceil(s_y);
@@ -310,8 +316,8 @@ float cal_bicubic_kernel(const float *f_data, float s_x, float s_y, DWORD s_weig
 	y = (float)is_y - s_y;
 
 	is_x = floor(s_x);
-	//is_x = is_x >= s_weight - 1 ? s_weight - 2 : is_x;
-	is_x = is_x >= s_weight - 1 ? s_weight - 1 : is_x;
+	//is_x = is_x >= s_width - 1 ? s_width - 2 : is_x;
+	is_x = is_x >= s_width - 1 ? s_width - 1 : is_x;
 	x = s_x - (float)is_x;
 
 	float c_j_[4], c_i_[4];
@@ -351,77 +357,86 @@ float cal_bicubic_kernel(const float *f_data, float s_x, float s_y, DWORD s_weig
 			//reflect to filled data (is_y + 1 - i + 2 , is_x - 1 + l +2)
 			int yy = (is_y + 1 - i + 2);
 			int xx = (is_x - 1 + j + 2);
-			//result += f_data[(is_y + 1 - i + 2)*(s_weight + 4) + (is_x - 1 + j + 2)]*c_i_[i]*c_j_[j];
+			//result += f_data[(is_y + 1 - i + 2)*(s_width + 4) + (is_x - 1 + j + 2)]*c_i_[i]*c_j_[j];
 			float coeff = c_i_[i] * c_j_[j];
-			result += f_data[yy*(s_weight + 4) + xx] * coeff;
+			result += f_data[yy*(s_width + 4) + xx] * coeff;
 		}
 	return result;
 }
 
-float nearest_neighbour(const float *f_data, float s_x, float s_y, DWORD s_weight, DWORD s_hight) {
+float nearest_neighbour(const float *f_data, float s_x, float s_y, DWORD s_width, DWORD s_height) {
 	int is_y, is_x;
-	is_y = (int)(s_y);
+	is_y = floor(s_y);
+	is_y = s_y - (float)is_y >= 0.5 ? (is_y + 1) : is_y;
 	//is_y = is_y <= 0 ? 1 : is_y;
 	//is_y = is_y <= 0 ? 0 : is_y;
 
-	is_x = (int)(s_x);
-	//is_x = is_x >= s_weight - 1 ? s_weight - 2 : is_x;
-	//is_x = is_x >= s_weight - 1 ? s_weight - 1 : is_x;
+	is_x = floor(s_x);
+	is_x = s_x - (float)is_x >= 0.5 ? (is_x + 1) : is_x;
+	//is_x = is_x >= s_width - 1 ? s_width - 2 : is_x;
+	//is_x = is_x >= s_width - 1 ? s_width - 1 : is_x;
 
-	int location = (is_y+2)*(s_weight+4) + is_x + 2;
+	int location = (is_y+2)*(s_width+4) + is_x + 2;
 
 	return f_data[location];
 }
 
-void fill_data(const uint8_t* s_data, float * f_data, DWORD s_weight, DWORD s_hight) {
+void fill_data(const uint8_t* s_data, float * f_data, DWORD s_width, DWORD s_height) {
 //将原 w*h 大小的图像 填充到 (w+4) * (h+4)中，即上下左右增加了两行数据。
 //原边界外的元素的值用近邻元素的像素值代替
-	DWORD f_weight = s_weight + 4;
-	DWORD f_hight = s_hight +4 ;
+	DWORD f_width = s_width + 4;
+	DWORD f_height = s_height +4 ;
 
 	int s_i, s_j;
-	for(int i=0; i < f_hight ;++i)
-		for (int j = 0; j < f_weight; ++j) {
+	for(int i=0; i < f_height ;++i)
+		for (int j = 0; j < f_width; ++j) {
 			
 			s_i = (i - 2) < 0 ? 0 : (i - 2);
-			s_i = (i - 2) >= s_hight ? s_hight-1 : s_i;
+			s_i = (i - 2) >= s_height ? s_height-1 : s_i;
 
 			s_j = (j - 2) < 0 ? 0 : (j - 2);
-			s_j = (j - 2) >= s_weight ? s_weight - 1 : s_j;
-			f_data[i*f_weight+j] = (float)s_data[s_i * s_weight + s_j];
+			s_j = (j - 2) >= s_width ? s_width - 1 : s_j;
+			f_data[i*f_width+j] = (float)s_data[s_i * s_width + s_j];
 			
 			/*
-			if (i < 2 || (i + 2) >= s_hight || j < 2 || j + 2 >= s_weight)
-				f_data[i*f_weight + j] = 0;
+			if (i < 2 || (i + 2) >= s_height || j < 2 || j + 2 >= s_width)
+				f_data[i*f_width + j] = 0;
 			else
-				f_data[i*f_weight + j] = (float)s_data[(i-2) * s_weight + (j-2)];
+				f_data[i*f_width + j] = (float)s_data[(i-2) * s_width + (j-2)];
 			*/
 		}
 }
 
-void interpolation(const uint8_t *s_data, uint8_t *d_data, DWORD s_weight, DWORD s_hight, float weight_scale, float hight_scale, int MODE) {
+void interpolation(const uint8_t *s_data, uint8_t *d_data, DWORD s_width, DWORD s_height, float width_scale, float height_scale, int MODE) {
 	//prefix: d for destination  image; s for source image
 	//
-	if (weight_scale <= 0 || hight_scale <= 0)
+	clock_t start, end;
+	double duration;
+	start = clock();
+
+	if (width_scale <= 0 || height_scale <= 0)
 		return;
-	DWORD d_weight = s_weight * weight_scale;
-	DWORD d_hight = s_hight * hight_scale;
+	DWORD d_width = s_width * width_scale;
+	DWORD d_height = s_height * height_scale;
 
 	//buffer with filling
 	float *f_data = nullptr;
-	f_data = (float *)malloc(sizeof(float)*(s_weight + 4)*(s_hight + 4));
-	fill_data(s_data, f_data, s_weight, s_hight);
+	f_data = (float *)malloc(sizeof(float)*(s_width + 4)*(s_height + 4));
+	fill_data(s_data, f_data, s_width, s_height);
 
 	//coefficient
-	float *coeff;
+	float *coeff=nullptr;
 	float a;
-	coeff = (float *)malloc(sizeof(float)*s_weight*s_hight * 16);
 
 	//compute coeef
-	if (MODE == MODE_BICUBIC)
-		bicubic_coeff(f_data, coeff, s_weight, s_hight);
-	else if (MODE == MODE_SPLINE)
-		bicubic_spline_coeff(f_data, coeff, s_weight, s_hight);
+	if (MODE == MODE_BICUBIC) {
+		coeff = (float *)malloc(sizeof(float)*s_width*s_height * 16);
+		bicubic_coeff(f_data, coeff, s_width, s_height);
+	}
+	else if (MODE == MODE_SPLINE) {
+		coeff = (float *)malloc(sizeof(float)*s_width*s_height * 16);
+		bicubic_spline_coeff(f_data, coeff, s_width, s_height);
+	}
 	else if (MODE == MODE_BC_KERNEL)
 		a = -0.75;
 	else if (MODE == MODE_LANCZOS_KERNEL)
@@ -432,30 +447,39 @@ void interpolation(const uint8_t *s_data, uint8_t *d_data, DWORD s_weight, DWORD
 	uint8_t *output = d_data;
 	float s_x, s_y;
 	float temp;
-	for (int i = 0; i < d_hight; ++i) {
+	for (int i = 0; i < d_height; ++i) {
 		//destination y ->  source y
-		s_y = (float)i / (float)(d_hight - 1) * (float)(s_hight - 1);
-		for (int j = 0; j < d_weight; ++j) {
+		s_y = (float)i / (float)(d_height - 1) * (float)(s_height - 1);
+		for (int j = 0; j < d_width; ++j) {
 			//destination x -> source x
-			s_x = (float)j / (float)(d_weight - 1) * (float)(s_weight - 1);
+			s_x = (float)j / (float)(d_width - 1) * (float)(s_width - 1);
 
 			if (MODE == MODE_BICUBIC || MODE == MODE_SPLINE)
-				temp = cal_bicubic(coeff, s_x, s_y, s_weight, s_hight);
+				temp = cal_bicubic(coeff, s_x, s_y, s_width, s_height);
 			else if (MODE == MODE_BC_KERNEL || MODE == MODE_LANCZOS_KERNEL)
-				temp = cal_bicubic_kernel(f_data, s_x, s_y, s_weight, s_hight, a, MODE);
+				temp = cal_bicubic_kernel(f_data, s_x, s_y, s_width, s_height, a, MODE);
 			else if (MODE == MODE_NEAREST_NEIGHBOUR)
-				temp = nearest_neighbour(f_data, s_x, s_y, s_weight, s_hight);
+				temp = nearest_neighbour(f_data, s_x, s_y, s_width, s_height);
+			
 			if (temp >= 255)
 				temp = 255.0;
 			else if (temp <= 0)
 				temp = 0;
-			output[i*d_weight + j] = (uint8_t)temp;
+			output[i*d_width + j] = (uint8_t)temp;
 		}
 	}
 
 	free(f_data);
-	free(coeff);
-
+	if(coeff!=nullptr)
+		free(coeff);
+	end = clock();
+	duration = end - start;
+	duration = duration / CLOCKS_PER_SEC;
+	std::cout	<< "Time of scaling picture: "
+				<<s_width<<"x"<<s_height 
+				<<" in rate:"<<width_scale<<"x"<<height_scale
+				<<" using method:"<<MODE_NAME[MODE]
+				<<"	finished in:"<<duration<<"s"<<std::endl;
 }
 
 
