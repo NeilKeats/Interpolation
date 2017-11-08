@@ -15,6 +15,7 @@ void main()
 	//const char *fileName = "D:\\Projects\\test.bmp";
 	//const char *fileName = "D:\\Projects\\data\\dic challenge12\\crop_oht_cfrp_0.bmp";
 	const char *fileName = "D:\\Projects\\lena512.bmp";
+	const char *bufferName = "D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\OUTPUT\\buffer.txt";
 	FILE *fp = nullptr;
 	int r, g, b, pix;
 
@@ -55,14 +56,15 @@ void main()
 	bmp_i OutImage = inImage;
 	OutImage.buf = nullptr;
 	OutImage.resize(SCALERATE);
-	char *tmp = OutImage.table;
-	OutImage.table = (char* )malloc(OutImage.bf.bfOffBits-54);
+	uint8_t *tmp = OutImage.table;
+	OutImage.table = (uint8_t* )malloc(OutImage.bf.bfOffBits-54);
 	memcpy(OutImage.table,tmp, OutImage.bf.bfOffBits - 54);
-	interpolation(	inImage.buf, OutImage.buf, 
+	interpolation(	(uint8_t*)inImage.buf, OutImage.buf,
 					inImage.w, inImage.h, 
-					SCALERATE, SCALERATE, MODE_BICUBIC);
-	FILE *fpw = fopen("TestOutputx1_spline_point5.bmp","wb");
+					SCALERATE, SCALERATE, MODE_NEAREST_NEIGHBOUR);
+	FILE *fpw = fopen("D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\OUTPUT\\test.bmp","wb");
 	OutImage.write_image(fpw);
+	//OutImage.write_buffer(bufferName);
 	//inImage.write_image(fpw);
 	fclose(fpw);
 
