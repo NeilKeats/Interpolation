@@ -440,7 +440,8 @@ void interpolation(const uint8_t *s_data, uint8_t *d_data, DWORD s_width, DWORD 
 	else if (MODE == MODE_BC_KERNEL)
 		a = -0.75;
 	else if (MODE == MODE_LANCZOS_KERNEL)
-		a = 3;
+		//using a = 3, casues some kind of stripes?. unknown
+		a = 2;
 	else if (MODE == MODE_NEAREST_NEIGHBOUR)
 		;
 

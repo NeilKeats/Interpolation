@@ -39,6 +39,7 @@ public:
 	}
 	void write_image(FILE *fpw);
 	void resize(float width_scale, float height_scale);
+	void cutimage(DWORD n_width, DWORD n_height, DWORD w_offset, DWORD h_offset);
 	void write_buffer(const char *filename);
 	void converte_to_grey();
 
@@ -222,11 +223,42 @@ void bmp_i::converte_to_grey() {
 	}
 }
 
+void bmp_i::cutimage(DWORD n_width, DWORD n_height, DWORD w_offset, DWORD h_offset) {
+	if (w_offset + n_width > w || h_offset + n_height > h || this->buf == nullptr)
+		return;
+
+	uint8_t *n_buffer = (uint8_t *)malloc(n_width*n_height);
+	for (int i = 0; i < n_height; ++i)
+		for (int j = 0; j < n_width; ++j) {
+			n_buffer[i*n_width + j] =
+				this->buf[(i + h_offset)*this->w + (w_offset + j)];
+		}
+	
+	this->bi.biWidth = n_width;
+	this->w = n_width;
+	this->bi.biHeight = n_height;
+	this->h = n_height;
+
+	//considering padding
+	DWORD aligned_width = (this->w + 3) / 4 * 4;
+	this->bi.biSizeImage = aligned_width*this->h;
+	this->bitSize = this->bi.biSizeImage;
+
+	this->bf.bfSize =
+		bf.bfOffBits + this->bitSize;
+
+
+	free(this->buf);
+	this->buf = n_buffer;
+	return;
+
+}
+
 bmp_i* bmp_file_read(const char* fileName) {
 	FILE *fp;
 	if ((fp = fopen(fileName, "rb")) == NULL)
 	{
-		std::cerr << "文件未找到！";
+		std::cerr << "文件未找到！" << std::endl;
 		return nullptr;
 	}
 	bmp_i *temp = new bmp_i(fp);
@@ -244,12 +276,38 @@ void bmp_file_write(bmp_i *bmp, const char* fileName) {
 
 	if ((fpw = fopen(fileName, "wb")) == NULL)
 	{
-		std::cerr << "文件未找到！";
+		std::cerr << "文件未找到！"<<std::endl;
 		return ;
 	}
 	bmp->write_image(fpw);
 	fclose(fpw);
 }
 
+float bmp_compare(const bmp_i *tar, const bmp_i *ref, float *t_aver, float *r_aver) {
+	if (tar->w != ref->w || tar->h != ref->h)
+		return -1;
+
+	unsigned long t_total, r_total , bias;
+	t_total = r_total = bias = 0;
+	int tar_value, ref_value , temp;
+	for(int i=0; i< tar->h ; ++i)
+		for (int j = 0; j < tar->w; ++j) {
+
+			tar_value = tar->buf[i*tar->w + j];
+			ref_value = ref->buf[i*tar->w + j];
+
+			t_total += tar_value;
+			r_total += ref_value;
+
+			temp = tar_value - ref_value;
+			temp = temp < 0 ? -temp : temp ;
+			bias += temp*temp;
+		}
+
+	*t_aver = (double)t_total / (double)(tar->w*tar->h);
+	*r_aver = (double)r_total / (double)(tar->w*tar->h);
+	return (double)bias/(double)(tar->w*tar->h);;
+
+}
 
 #endif // !BMP_Image
