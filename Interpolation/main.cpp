@@ -19,10 +19,13 @@ const string inputDir =
 	//"D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\INPUT\\";
 const string outputDir =
 	"D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\DATASET_OUTPUT\\";
+	//"D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\OUTPUT\\";
 const string inFileName =
 	"epoxy_tensile_g_0";
 	//"lena512";
-const string outFileName =	"epoxy_tensile_g_0_cut_scale_";
+const string outFileName =
+	"epoxy_tensile_g_0_";
+	//"lena512_";
 
 void converte_gray_batch() {
 	const string i_dir = "D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\DATASET_INPUT\\";
@@ -121,7 +124,7 @@ void test(const bmp_i *inImage) {
 	if (RefImage == nullptr)
 		return;
 
-	for (int i = 0; i<5; ++i){
+	for (int i = 0; i<6; ++i){
 		float t_aver, r_aver, bias;
 		bmp_i OutImage(inImage);
 		OutImage.resize(WIDTH_SCALERATE, HEIGHT_SCALERATE);
@@ -131,21 +134,18 @@ void test(const bmp_i *inImage) {
 			inImage->w, inImage->h,
 			WIDTH_SCALERATE, HEIGHT_SCALERATE, A_MODE[i]);
 
-		bias = bmp_compare(&OutImage,RefImage,&t_aver,&r_aver);
 		
-		/*
-		float bias_ = (r_aver - t_aver);
-		bias_ = bias_ < 0 ? -bias_ : bias_;
-		*/
-
+		bias = bmp_compare(&OutImage,RefImage,&t_aver,&r_aver);
+	
 		cout << "target_aver:" << t_aver
 			<< "	ref_aver:" << r_aver
 			<< "	bias:" << bias << endl;
-
+		
+		
 		string outputfile = outputDir + outFileName + MODE_NAME[i] + postfix;
 		//OutImage.cutimage(OutImage.w - 20, OutImage.h, 0, 0);
 		
-		//bmp_file_write(&OutImage, outputfile.c_str());
+		bmp_file_write(&OutImage, outputfile.c_str());
 	}
 
 	delete RefImage;

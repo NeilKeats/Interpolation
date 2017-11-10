@@ -381,6 +381,29 @@ float nearest_neighbour(const float *f_data, float s_x, float s_y, DWORD s_width
 	return f_data[location];
 }
 
+float bilinear(const float* f_data, float s_x, float s_y, DWORD s_width, DWORD s_height) {
+	int y_0, x_0, y_1, x_1;
+	float f_y0_x0, f_y0_x1, f_y1_x0, f_y1_x1;
+	float f_y0, f_y1, f_inter;
+
+	y_0 = floor(s_y);
+	y_1 = y_0 + 1;
+
+	x_0 = floor(s_x);
+	x_1 = x_0 + 1;
+
+	f_y0_x0 = f_data[(y_0+2)*(s_width + 4) + (x_0 + 2)];
+	f_y0_x1 = f_data[(y_0+2)*(s_width + 4) + (x_1 + 2)];
+	f_y1_x0 = f_data[(y_1+2)*(s_width + 4) + (x_0 + 2)];
+	f_y1_x1 = f_data[(y_1+2)*(s_width + 4) + (x_1 + 2)];
+
+	f_y0 = f_y0_x0 + (s_x - (float)x_0)*(f_y0_x1 - f_y0_x0);
+	f_y1 = f_y1_x0 + (s_x - (float)x_0)*(f_y1_x1 - f_y1_x0);
+	f_inter = f_y0 + (s_y - (float)y_0)*(f_y1 - f_y0);
+
+	return f_inter;
+}
+
 void fill_data(const uint8_t* s_data, float * f_data, DWORD s_width, DWORD s_height) {
 //将原 w*h 大小的图像 填充到 (w+4) * (h+4)中，即上下左右增加了两行数据。
 //原边界外的元素的值用近邻元素的像素值代替
@@ -392,10 +415,10 @@ void fill_data(const uint8_t* s_data, float * f_data, DWORD s_width, DWORD s_hei
 		for (int j = 0; j < f_width; ++j) {
 			
 			s_i = (i - 2) < 0 ? 0 : (i - 2);
-			s_i = (i - 2) >= s_height ? s_height-1 : s_i;
+			s_i = (i - 2) >= (int)s_height ? s_height-1 : s_i;
 
 			s_j = (j - 2) < 0 ? 0 : (j - 2);
-			s_j = (j - 2) >= s_width ? s_width - 1 : s_j;
+			s_j = (j - 2) >= (int)s_width ? s_width - 1 : s_j;
 			f_data[i*f_width+j] = (float)s_data[s_i * s_width + s_j];
 			
 			/*
@@ -444,6 +467,8 @@ void interpolation(const uint8_t *s_data, uint8_t *d_data, DWORD s_width, DWORD 
 		a = 2;
 	else if (MODE == MODE_NEAREST_NEIGHBOUR)
 		;
+	else if (MODE == MODE_BILINEAR)
+		;
 
 	uint8_t *output = d_data;
 	float s_x, s_y;
@@ -461,7 +486,9 @@ void interpolation(const uint8_t *s_data, uint8_t *d_data, DWORD s_width, DWORD 
 				temp = cal_bicubic_kernel(f_data, s_x, s_y, s_width, s_height, a, MODE);
 			else if (MODE == MODE_NEAREST_NEIGHBOUR)
 				temp = nearest_neighbour(f_data, s_x, s_y, s_width, s_height);
-			
+			else if (MODE == MODE_BILINEAR)
+				temp = bilinear(f_data, s_x, s_y, s_width, s_height);
+
 			if (temp >= 255)
 				temp = 255.0;
 			else if (temp <= 0)
