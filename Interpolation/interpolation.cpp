@@ -6,6 +6,7 @@
 #include<string.h> 
 #include<math.h>
 #include<time.h>
+#include<fstream>
 //#include<cmath>
 
 #define TIME_COUNT
@@ -42,26 +43,65 @@ static double m_dBSplineFunctionMatrix[4][4] = {
 	{ -3 / 6.0, 0, 3 / 6.0, 0 },
 	{ 1 / 6.0, 4 / 6.0, 1 / 6.0, 0 } };
 
-inline float bubic_conv_kernel(float a, float x) {
+inline float bubic_conv_kernel(const float *a, float x) {
 	float tmp = x < 0 ? -x : x;
 	if (tmp <= 1)
-		return ((a + 2)*pow(tmp, 3) - (a + 3)*pow(tmp, 2) + 1);
+		//return ((*a + 2)*pow(tmp, 3) - (*a + 3)*pow(tmp, 2) + 1);
+		return ((*a + 2)*tmp*tmp*tmp - (*a + 3)*tmp*tmp + 1);
 	else if (1 < tmp < 2)
-		return (a*pow(tmp, 3) - 5 * a*pow(tmp, 2) + 8 * a*tmp - 4 * a);
+		//return ((*a)*pow(tmp, 3) - 5 * (*a)*pow(tmp, 2) + 8 * (*a)*tmp - 4 * (*a));
+		return ((*a)*tmp*tmp*tmp - 5 * (*a)*tmp*tmp + 8 * (*a)*tmp - 4 * (*a));
 	else
 		return 0;
 };
 
-inline float lanczos_conv_kernel(float a, float x) {
+inline float lanczos_conv_kernel(const float *a, float x) {
 
 	if (x == 0)
 		return 1;
-	else if (x<a && x > -a) {
-		float result = (a*sinf(M_PI*x)*sinf(M_PI*x/a))/(M_PI*M_PI*x*x);
+	else if (x<(*a) && x > -(*a)) {
+		float result = ((*a)*sinf(M_PI*x)*sinf(M_PI*x/(*a)))/(M_PI*M_PI*x*x);
 		return result;
 	}
 	else
 		return 0;
+}
+
+inline float bell_conv_kernel(const float *a, float x) {
+	float tmp = x < 0 ? -x : x;
+	if (x < 0.5)
+		return 0.75 - x*x;
+	else if (x < 1.5)
+		return 0.5*(1.5 - x)*(1.5 - x);
+	else
+		return 0;
+}
+
+inline float hermite_conv_kernel(const float *a, float x) {
+	float tmp = 0;
+	return bubic_conv_kernel( &tmp, x);
+}
+
+float mitchell_conv_kernel(const float *a, float x) {
+	float B = a[0];
+	float C = a[1];
+	float x_ = x < 0 ? -x : x;
+	
+	float result = 0;
+	if (x_ < 1)
+		result =(
+				x_*x_*x_*(12 - 9 * B - 6 * C)
+				+ x_*x_*(-18 + 12 * B + 6 * C)
+				+ (6 - 2 * B)
+				) / 6;
+	else if (x_ < 2)
+		result = (
+					x_*x_*x_*(-B - 6*C)
+					+ x_*x_*(6*B + 30*C)
+					+ x_*(-12*B -48*C)
+					+ (8*B + 24*C)
+					) / 6;
+	return result;
 }
 
 void gradientX(const float *f_data, float * dx, float *dbuffer, DWORD width, DWORD height) {
@@ -243,6 +283,35 @@ void bicubic_spline_coeff(const float *f_data, float * coeff, DWORD s_width, DWO
 
 }
 
+void kernel_coeff(const float *f_data, float * coeff, DWORD s_width, DWORD s_height) {
+	int i, j, index;
+	for(i = 0; i<s_height; ++i)
+		for (j = 0; j < s_width; ++j) {
+			index = (i*s_width + j) * 16;
+
+			coeff[index++] = f_data[(i + 1 + 2)*(s_width + 4) + j - 1 + 2];
+			coeff[index++] = f_data[(i + 1 + 2)*(s_width + 4) + j + 2 ];
+			coeff[index++] = f_data[(i + 1 + 2)*(s_width + 4) + j + 1 + 2 ];
+			coeff[index++] = f_data[(i + 1 + 2)*(s_width + 4) + j + 2 + 2 ];
+
+			coeff[index++] = f_data[(i + 2)*(s_width + 4) + j - 1 + 2 ];
+			coeff[index++] = f_data[(i + 2)*(s_width + 4) + j + 2];
+			coeff[index++] = f_data[(i + 2)*(s_width + 4) + j + 1 + 2];
+			coeff[index++] = f_data[(i + 2)*(s_width + 4) + j + 2 + 2];
+
+			coeff[index++] = f_data[(i - 1 + 2)*(s_width + 4) + j - 1 + 2];
+			coeff[index++] = f_data[(i - 1 + 2)*(s_width + 4) + j + 2];
+			coeff[index++] = f_data[(i - 1 + 2)*(s_width + 4) + j + 1 + 2];
+			coeff[index++] = f_data[(i - 1 + 2)*(s_width + 4) + j + 2 + 2];
+
+			coeff[index++] = f_data[(i - 2 + 2)*(s_width + 4) + j - 1 + 2];
+			coeff[index++] = f_data[(i - 2 + 2)*(s_width + 4) + j + 2];
+			coeff[index++] = f_data[(i - 2 + 2)*(s_width + 4) + j + 1 + 2];
+			coeff[index++] = f_data[(i - 2 + 2)*(s_width + 4) + j + 2 + 2];
+
+		}
+}
+
 float cal_bicubic(float *coeff, float s_x, float s_y, DWORD s_width, DWORD s_height) {
 	//coefficient array obtained from the left corner element.
 	//for y, using ceil(),causes our image data start from left bottom
@@ -266,23 +335,32 @@ float cal_bicubic(float *coeff, float s_x, float s_y, DWORD s_width, DWORD s_hei
 	float *local_coeff = coeff + (is_y*s_width + is_x) * 16;
 	
 	float p_x[4],temp[4];
-	/*
+	
 	p_x[0] = 1;
 	p_x[1] = x;
 	p_x[2] = x*x;
 	p_x[3] = x*x*x;
-	*/
+	
+	/*
 	p_x[0] = pow(x, 0);
 	p_x[1] = pow(x, 1);
 	p_x[2] = pow(x, 2);
 	p_x[3] = pow(x, 3);
-
+	*/
 	//
 	float result = 0;
+
+	temp[0] = 1;
+	temp[1] = y;
+	temp[2] = y*y;
+	temp[3] = y*y*y;
+	/*
 	temp[0] = pow(y, 0);
 	temp[1] = pow(y, 1);
 	temp[2] = pow(y, 2);
 	temp[3] = pow(y, 3);
+	*/
+
 	for(int k=0 ; k<4 ; ++k)
 		for (int j = 0; j < 4; ++j) {
 			result += local_coeff[k*4 + j] * temp[k] * p_x[j];
@@ -307,7 +385,7 @@ float cal_bicubic(float *coeff, float s_x, float s_y, DWORD s_width, DWORD s_hei
 	return result;
 }
 
-float cal_bicubic_kernel(const float *f_data, float s_x, float s_y, DWORD s_width, DWORD s_height, float a, int MODE) {
+float cal_bicubic_kernel(const float *data, float s_x, float s_y, DWORD s_width, DWORD s_height, const float *a, int MODE) {
 	int is_y, is_x;
 	float x, y;
 	is_y = ceil(s_y);
@@ -321,6 +399,37 @@ float cal_bicubic_kernel(const float *f_data, float s_x, float s_y, DWORD s_widt
 	x = s_x - (float)is_x;
 
 	float c_j_[4], c_i_[4];
+	float(*kernel_func)(const float*,float) = nullptr; 
+	switch (MODE) {
+	case MODE_BC_KERNEL: 
+		kernel_func = &bubic_conv_kernel;
+		break;
+	case MODE_LANCZOS_KERNEL:
+		kernel_func = &lanczos_conv_kernel;
+		break;
+	case MODE_BELL_KERNEL:
+		kernel_func = &bell_conv_kernel;
+		break;
+	case MODE_HERMITE_KERNEL:
+		kernel_func = &hermite_conv_kernel;
+		break;
+	case MODE_MITCHELL_KERNEL:
+		kernel_func = &mitchell_conv_kernel;
+		break;
+	default:
+		break;
+	}
+
+	c_j_[0] = kernel_func(a, (1 + x));
+	c_j_[1] = kernel_func(a, (x));
+	c_j_[2] = kernel_func(a, (1 - x));
+	c_j_[3] = kernel_func(a, (2 - x));
+
+	c_i_[0] = kernel_func(a, (1 + y));
+	c_i_[1] = kernel_func(a, (y));
+	c_i_[2] = kernel_func(a, (1 - y));
+	c_i_[3] = kernel_func(a, (2 - y));
+	/*
 	if (MODE == MODE_BC_KERNEL) {
 		c_j_[0] = bubic_conv_kernel(a, (1 + x));
 		c_j_[1] = bubic_conv_kernel(a, (x));
@@ -343,6 +452,8 @@ float cal_bicubic_kernel(const float *f_data, float s_x, float s_y, DWORD s_widt
 		c_i_[2] = lanczos_conv_kernel(a, (1 - y));
 		c_i_[3] = lanczos_conv_kernel(a, (2 - y));
 	}
+	*/
+
 	float result = 0;
 
 	float sum = 0;
@@ -351,15 +462,18 @@ float cal_bicubic_kernel(const float *f_data, float s_x, float s_y, DWORD s_widt
 			sum += c_i_[i]*c_j_[j];
 
 	//store neighbour value into Omeiga
+	int index = (is_y*s_width + is_x) * 16;
 	for (int i = 0; i < 4; ++i)
 		for (int j = 0; j < 4; ++j){
 			//reflect to original data (is_y + 1 - i, is_x - 1 +l)
 			//reflect to filled data (is_y + 1 - i + 2 , is_x - 1 + l +2)
-			int yy = (is_y + 1 - i + 2);
-			int xx = (is_x - 1 + j + 2);
+			//int yy = (is_y + 1 - i + 2);
+			//int xx = (is_x - 1 + j + 2);
 			//result += f_data[(is_y + 1 - i + 2)*(s_width + 4) + (is_x - 1 + j + 2)]*c_i_[i]*c_j_[j];
+			
 			float coeff = c_i_[i] * c_j_[j];
-			result += f_data[yy*(s_width + 4) + xx] * coeff;
+			//result += f_data[yy*(s_width + 4) + xx] * coeff;
+			result += data[index++] * coeff;
 		}
 	return result;
 }
@@ -449,25 +563,52 @@ void interpolation(const uint8_t *s_data, uint8_t *d_data, DWORD s_width, DWORD 
 
 	//coefficient
 	float *coeff=nullptr;
-	float a;
+	float *a=nullptr;
 
 	//compute coeef
 	if (MODE == MODE_BICUBIC) {
+		clock_t gen_start = clock();
 		coeff = (float *)malloc(sizeof(float)*s_width*s_height * 16);
 		bicubic_coeff(f_data, coeff, s_width, s_height);
+
+		clock_t gen_end = clock();
+		double gen_duration = gen_end - gen_start;
+		std::cout << "time of constructing coefficient: "
+			<< gen_duration / CLOCKS_PER_SEC << std::endl;
 	}
 	else if (MODE == MODE_SPLINE) {
+		clock_t gen_start = clock();
 		coeff = (float *)malloc(sizeof(float)*s_width*s_height * 16);
 		bicubic_spline_coeff(f_data, coeff, s_width, s_height);
+		clock_t gen_end = clock();
+		double gen_duration = gen_end - gen_start;
+		std::cout <<"time of constructing coefficient: "
+			<<gen_duration/CLOCKS_PER_SEC<<std::endl;
 	}
-	else if (MODE == MODE_BC_KERNEL)
-		a = -0.75;
-	else if (MODE == MODE_LANCZOS_KERNEL)
+	else if (MODE == MODE_BC_KERNEL) {
+		a = new float(-0.75);
+		coeff = (float*)malloc(sizeof(float)*s_width*s_height*16);
+		kernel_coeff(f_data,coeff,s_width,s_height);
+	}
+	else if (MODE == MODE_LANCZOS_KERNEL){
 		//using a = 3, casues some kind of stripes?. unknown
-		a = 2;
-	else if (MODE == MODE_NEAREST_NEIGHBOUR)
-		;
-	else if (MODE == MODE_BILINEAR)
+		a = new float(2.0);
+		coeff = (float*)malloc(sizeof(float)*s_width*s_height * 16);
+		kernel_coeff(f_data, coeff, s_width, s_height);
+	}
+	else if (MODE == MODE_MITCHELL_KERNEL){
+		a = new float[2]{ 1.0f / 3.0f, 1.0f / 3.0f };
+		coeff = (float*)malloc(sizeof(float)*s_width*s_height * 16);
+		kernel_coeff(f_data, coeff, s_width, s_height);
+	}
+	else if (MODE == MODE_BELL_KERNEL || MODE == MODE_HERMITE_KERNEL){
+		//useless but for indicating using kernel
+		a = new float(0);
+		coeff = (float*)malloc(sizeof(float)*s_width*s_height * 16);
+		kernel_coeff(f_data, coeff, s_width, s_height);
+	}
+	//nearest neighbour\ bilinear
+	else
 		;
 
 	uint8_t *output = d_data;
@@ -482,8 +623,10 @@ void interpolation(const uint8_t *s_data, uint8_t *d_data, DWORD s_width, DWORD 
 
 			if (MODE == MODE_BICUBIC || MODE == MODE_SPLINE)
 				temp = cal_bicubic(coeff, s_x, s_y, s_width, s_height);
-			else if (MODE == MODE_BC_KERNEL || MODE == MODE_LANCZOS_KERNEL)
-				temp = cal_bicubic_kernel(f_data, s_x, s_y, s_width, s_height, a, MODE);
+			//else if (MODE == MODE_BC_KERNEL || MODE == MODE_LANCZOS_KERNEL)
+			else if(a != nullptr)
+				//temp = cal_bicubic_kernel(f_data, s_x, s_y, s_width, s_height, a, MODE);
+				temp = cal_bicubic_kernel(coeff, s_x, s_y, s_width, s_height, a, MODE);
 			else if (MODE == MODE_NEAREST_NEIGHBOUR)
 				temp = nearest_neighbour(f_data, s_x, s_y, s_width, s_height);
 			else if (MODE == MODE_BILINEAR)
@@ -497,6 +640,8 @@ void interpolation(const uint8_t *s_data, uint8_t *d_data, DWORD s_width, DWORD 
 		}
 	}
 
+	if (a != nullptr)
+		free(a);
 	free(f_data);
 	if(coeff!=nullptr)
 		free(coeff);
@@ -508,6 +653,16 @@ void interpolation(const uint8_t *s_data, uint8_t *d_data, DWORD s_width, DWORD 
 				<<" in rate:"<<width_scale<<"x"<<height_scale
 				<<" using method:"<<MODE_NAME[MODE]
 				<<"	finished in:"<<duration<<"s"<<std::endl;
+	/* record time */
+
+	/*
+	std::ofstream fout;
+	fout.open(("D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\OUTPUT\\record.txt"), std::ios::app);
+	if (fout.is_open()) {
+		fout << duration<<" ";
+		fout.close();
+	}
+	*/
 }
 
 

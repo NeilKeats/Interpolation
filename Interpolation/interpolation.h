@@ -7,33 +7,51 @@
 #include<string>
 
 #define MODE_NEAREST_NEIGHBOUR 0x00
-#define MODE_BICUBIC 0x01
-#define MODE_SPLINE 0x02
-#define MODE_BC_KERNEL 0x03
-#define MODE_LANCZOS_KERNEL 0x04
-#define MODE_BILINEAR 0x05
+#define MODE_BILINEAR 0x01
+#define MODE_BICUBIC 0x02
+#define MODE_SPLINE 0x03
+#define MODE_BC_KERNEL 0x04
+#define MODE_BELL_KERNEL 0x05
+#define MODE_HERMITE_KERNEL 0x06
+#define MODE_MITCHELL_KERNEL 0x07
+#define MODE_LANCZOS_KERNEL 0x08
 
 static int A_MODE[] = { 
 	MODE_NEAREST_NEIGHBOUR,
+	MODE_BILINEAR,
 	MODE_BICUBIC,
 	MODE_SPLINE,
 	MODE_BC_KERNEL,
-	MODE_LANCZOS_KERNEL,
-	MODE_BILINEAR};
+	MODE_BELL_KERNEL,
+	MODE_HERMITE_KERNEL,
+	MODE_MITCHELL_KERNEL,
+	MODE_LANCZOS_KERNEL};
 
 
 static std::string MODE_NAME[] = { 
 	"NN",
+	"BILINEAR",
 	"BICUBIC",
 	"BSPLINE",
 	"BC_KERNEL",
-	"LANCZOS_KERNEL",
-	"BILINEAR"};
+	"BELL_KERNEL",
+	"HERMITE_KERNEL",
+	"MITCHELL_KERNEL",
+	"LANCZOS_KERNEL" };
 
+//order 3
+float bubic_conv_kernel(const float *a, float x);
 
-float bubic_conv_kernel(float a, float x);
+float lanczos_conv_kernel(const float *a, float x);
 
-float lanczos_conv_kernel(float a, float x);
+//order 2
+float bell_conv_kernel(const float *a, float x);
+
+//order 3
+float hermite_conv_kernel(const float *a, float x);//a particular case of bicubic kernel. while a=0
+
+//order 3
+float mitchell_conv_kernel(const float *a, float x);
 
 void gradientX(const float *Imdata, float * dx, float *dbuffer, DWORD width, DWORD height);
 
@@ -43,9 +61,11 @@ void bicubic_coeff(const float *Imdata,float * coeff, DWORD width, DWORD height)
 
 void bicubic_spline_coeff(const float *f_data, float * coeff, DWORD s_width, DWORD s_height);
 
+void kernel_coeff(const float *f_data, float * coeff, DWORD s_width, DWORD s_height);
+
 float cal_bicubic(float *coeff, float s_x, float s_y, DWORD s_width, DWORD s_height);
 
-float cal_bicubic_kernel(const float *f_data, float s_x, float s_y, DWORD s_width, DWORD s_height, float a, int MODE);
+float cal_bicubic_kernel(const float *f_data, float s_x, float s_y, DWORD s_width, DWORD s_height, const float *a, int MODE);
 
 float nearest_neighbour(const float *f_data, float s_x, float s_y, DWORD s_width, DWORD s_height);
 

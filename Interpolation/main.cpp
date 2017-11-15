@@ -6,11 +6,12 @@
 #include<string.h>  
 #include "BMP_Image.h"
 #include "interpolation.h"
+#include<fstream>
 using namespace std;
 
 #define SCALERATE 2.0
-#define WIDTH_SCALERATE 19.98020833
-#define HEIGHT_SCALERATE 1.0
+#define WIDTH_SCALERATE 3.16228 //19.98020833
+#define HEIGHT_SCALERATE 3.16228
 
 const string postfix = ".bmp";
 
@@ -21,11 +22,15 @@ const string outputDir =
 	"D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\DATASET_OUTPUT\\";
 	//"D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\OUTPUT\\";
 const string inFileName =
-	"epoxy_tensile_g_0";
-	//"lena512";
+	//"epoxy_tensile_g_0";
+	"lena512";
+	//"mr";
+	//"bel_960";
 const string outFileName =
-	"epoxy_tensile_g_0_";
-	//"lena512_";
+	//"epoxy_tensile_g_0_";
+	"lena512_";
+	//"mr_";
+	//"bel_up_2";
 
 void converte_gray_batch() {
 	const string i_dir = "D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\DATASET_INPUT\\";
@@ -118,13 +123,23 @@ void merge_image() {
 
 void test(const bmp_i *inImage) {
 
-	const string ref_filename = "D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\DATASET_OUTPUT\\epoxy_tensile_merge.bmp";
+	//const string ref_filename = "D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\DATASET_OUTPUT\\epoxy_tensile_merge.bmp";
+	const string ref_filename = "D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\DATASET\\bel.bmp";
 	bmp_i *RefImage = nullptr;
 	RefImage = bmp_file_read(ref_filename.c_str());
 	if (RefImage == nullptr)
 		return;
 
-	for (int i = 0; i<6; ++i){
+	/*
+	std::ofstream fout;
+	fout.open("D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\OUTPUT\\record.txt", std::ios::app);
+	if (fout.is_open()) {
+		fout << WIDTH_SCALERATE<<"x"<< HEIGHT_SCALERATE<<" "<<WIDTH_SCALERATE*HEIGHT_SCALERATE<<std::endl;
+		fout.close();
+	}
+	*/
+
+	for (int i = 0; i<9; ++i){
 		float t_aver, r_aver, bias;
 		bmp_i OutImage(inImage);
 		OutImage.resize(WIDTH_SCALERATE, HEIGHT_SCALERATE);
@@ -135,6 +150,7 @@ void test(const bmp_i *inImage) {
 			WIDTH_SCALERATE, HEIGHT_SCALERATE, A_MODE[i]);
 
 		
+		/*
 		bias = bmp_compare(&OutImage,RefImage,&t_aver,&r_aver);
 	
 		cout << "target_aver:" << t_aver
@@ -143,11 +159,19 @@ void test(const bmp_i *inImage) {
 		
 		
 		string outputfile = outputDir + outFileName + MODE_NAME[i] + postfix;
-		//OutImage.cutimage(OutImage.w - 20, OutImage.h, 0, 0);
 		
 		bmp_file_write(&OutImage, outputfile.c_str());
+		*/
+
 	}
 
+	/*
+	fout.open("D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\OUTPUT\\record.txt", std::ios::app);
+	if (fout.is_open()) {
+		fout << std::endl;
+		fout.close();
+	}
+	*/
 	delete RefImage;
 
 };
@@ -172,8 +196,11 @@ void main()
 	//converte to gray
 	/*
 	inImage->converte_to_grey();
-	string outf = "D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\DATASET_INPUT\\epoxy_tensile_g_20.bmp";
+	string outf = "D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\DATASET\\bel_480.bmp";
 	bmp_file_write(inImage,outf.c_str());
+
+	if (inImage != nullptr)
+		delete inImage;
 	return;
 	*/
 
