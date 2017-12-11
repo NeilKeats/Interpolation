@@ -10,8 +10,8 @@
 using namespace std;
 
 #define SCALERATE 2.0
-#define WIDTH_SCALERATE 3.16228 //19.98020833
-#define HEIGHT_SCALERATE 3.16228
+#define WIDTH_SCALERATE  2.0//19.98020833 //3.16228
+#define HEIGHT_SCALERATE  2.0//3.16228
 
 const string postfix = ".bmp";
 
@@ -19,16 +19,21 @@ const string inputDir =
 	"D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\DATASET\\";
 	//"D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\INPUT\\";
 const string outputDir =
-	"D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\DATASET_OUTPUT\\";
+	"D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\NEW_TEST\\";
 	//"D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\OUTPUT\\";
 const string inFileName =
 	//"epoxy_tensile_g_0";
-	"lena512";
+	//"lena512";
 	//"mr";
+	"lena_256_B";
+	//"boat_256_B";
+	//"peppers_256_B";	
 	//"bel_960";
 const string outFileName =
 	//"epoxy_tensile_g_0_";
-	"lena512_";
+	//"lena_";
+	//"boat_";
+	"peppers_";	
 	//"mr_";
 	//"bel_up_2";
 
@@ -124,7 +129,8 @@ void merge_image() {
 void test(const bmp_i *inImage) {
 
 	//const string ref_filename = "D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\DATASET_OUTPUT\\epoxy_tensile_merge.bmp";
-	const string ref_filename = "D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\DATASET\\bel.bmp";
+	//const string ref_filename = "D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\DATASET\\bel.bmp";
+	const string ref_filename = "D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\DATASET\\lena512.bmp";
 	bmp_i *RefImage = nullptr;
 	RefImage = bmp_file_read(ref_filename.c_str());
 	if (RefImage == nullptr)
@@ -139,7 +145,11 @@ void test(const bmp_i *inImage) {
 	}
 	*/
 
-	for (int i = 0; i<9; ++i){
+	for (int i = 0; i<12; ++i){
+		if (i > 3 && i < 9)
+			//if (i!=3)
+			continue;
+
 		float t_aver, r_aver, bias;
 		bmp_i OutImage(inImage);
 		OutImage.resize(WIDTH_SCALERATE, HEIGHT_SCALERATE);
@@ -150,18 +160,20 @@ void test(const bmp_i *inImage) {
 			WIDTH_SCALERATE, HEIGHT_SCALERATE, A_MODE[i]);
 
 		
-		/*
+		
 		bias = bmp_compare(&OutImage,RefImage,&t_aver,&r_aver);
 	
 		cout << "target_aver:" << t_aver
 			<< "	ref_aver:" << r_aver
-			<< "	bias:" << bias << endl;
+			<< "	MSE:" << bias;
+		float PSNR = 20*log10f(255.0/sqrtf(bias));
+		cout<< "	PSNR:"<<PSNR<< endl;
 		
 		
 		string outputfile = outputDir + outFileName + MODE_NAME[i] + postfix;
 		
-		bmp_file_write(&OutImage, outputfile.c_str());
-		*/
+		//bmp_file_write(&OutImage, outputfile.c_str());
+		
 
 	}
 
@@ -215,7 +227,9 @@ void main()
 					downscale, 1.0, MODE_BICUBIC);
 	bmp_file_write(&OutImage, outputName.c_str());
 	*/
-	
+	//inImage->converte_to_grey();
+	//bmp_file_write(inImage, "D:\\Codes\\VS\\CXX\\Interpolation\\Interpolation\\boat.bmp");
+
 	test(inImage);
 
 	//converte_gray_batch();

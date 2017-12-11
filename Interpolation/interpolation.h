@@ -15,6 +15,10 @@
 #define MODE_HERMITE_KERNEL 0x06
 #define MODE_MITCHELL_KERNEL 0x07
 #define MODE_LANCZOS_KERNEL 0x08
+#define MODE_WAD_BILINEAR 0X09
+#define MODE_ADA_BILINEAR 0x0A
+#define MODE_CFLS_BILINEAR 0x0B
+
 
 static int A_MODE[] = { 
 	MODE_NEAREST_NEIGHBOUR,
@@ -25,7 +29,10 @@ static int A_MODE[] = {
 	MODE_BELL_KERNEL,
 	MODE_HERMITE_KERNEL,
 	MODE_MITCHELL_KERNEL,
-	MODE_LANCZOS_KERNEL};
+	MODE_LANCZOS_KERNEL,
+	MODE_WAD_BILINEAR,
+	MODE_ADA_BILINEAR,
+	MODE_CFLS_BILINEAR };
 
 
 static std::string MODE_NAME[] = { 
@@ -37,7 +44,10 @@ static std::string MODE_NAME[] = {
 	"BELL_KERNEL",
 	"HERMITE_KERNEL",
 	"MITCHELL_KERNEL",
-	"LANCZOS_KERNEL" };
+	"LANCZOS_KERNEL",
+	"WAD_BILINEAR",
+	"MODE_ADA_BILINEAR",
+	"MODE_CFLS_BILINEAR"};
 
 //order 3
 float bubic_conv_kernel(const float *a, float x);
@@ -63,13 +73,24 @@ void bicubic_spline_coeff(const float *f_data, float * coeff, DWORD s_width, DWO
 
 void kernel_coeff(const float *f_data, float * coeff, DWORD s_width, DWORD s_height);
 
-float cal_bicubic(float *coeff, float s_x, float s_y, DWORD s_width, DWORD s_height);
+float cal_bicubic(float *coeff, float s_x, float s_y, DWORD s_width, DWORD s_height, int MODE);
 
 float cal_bicubic_kernel(const float *f_data, float s_x, float s_y, DWORD s_width, DWORD s_height, const float *a, int MODE);
 
 float nearest_neighbour(const float *f_data, float s_x, float s_y, DWORD s_width, DWORD s_height);
 
 float bilinear(const float* f_data, float s_x, float s_y, DWORD s_width, DWORD s_height);
+
+/***********/
+void wad_coeff(const float *Imdata, float * coeff, DWORD s_width, DWORD s_height);
+
+float wad_bilinear(const float* f_data, const float* coeff, float s_x, float s_y, DWORD s_width, DWORD s_height);
+
+void ada_coeff(const float *Imdata, float * coeff, DWORD s_width, DWORD s_height);
+
+float ada_bilinear(const float* f_data, const float* coeff , float s_x, float s_y, DWORD s_width, DWORD s_height);
+
+float cfls_bilinear(const float* f_data, float s_x, float s_y, DWORD s_width, DWORD s_height);
 
 void fill_data(const uint8_t* s_data, float * f_data, DWORD s_width, DWORD s_height);
 

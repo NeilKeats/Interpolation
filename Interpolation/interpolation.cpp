@@ -312,7 +312,7 @@ void kernel_coeff(const float *f_data, float * coeff, DWORD s_width, DWORD s_hei
 		}
 }
 
-float cal_bicubic(float *coeff, float s_x, float s_y, DWORD s_width, DWORD s_height) {
+float cal_bicubic(float *coeff, float s_x, float s_y, DWORD s_width, DWORD s_height, int MODE) {
 	//coefficient array obtained from the left corner element.
 	//for y, using ceil(),causes our image data start from left bottom
 	//for x, using floor()
@@ -321,14 +321,23 @@ float cal_bicubic(float *coeff, float s_x, float s_y, DWORD s_width, DWORD s_hei
 	int is_y, is_x;
 	float x, y;
 	is_y = ceil(s_y);
-	is_y = is_y <= 0 ? 1 : is_y;
+	if (MODE == MODE_BICUBIC)
+		is_y = is_y <= 0 ? 1 : is_y;
+	else
+		is_y = is_y <= 0 ? 0 : is_y;
+	is_y = is_y >= s_height - 1 ? s_height - 1 : is_y;
+	//is_y = is_y >= s_height ? : ;
 	//is_y = is_y <= 0 ? 0 : is_y;
 	y = (float)is_y - s_y;
 
 	is_x = floor(s_x);
 	if (s_x >= s_width -1 )
 		is_x = is_x;
-	is_x = is_x >= s_width - 1 ? s_width - 2 : is_x;
+	is_x = is_x <= 0 ? 0 : is_x;	
+	if (MODE == MODE_BICUBIC)
+		is_x = is_x >= s_width - 1 ? s_width - 2 : is_x;
+	else
+		is_x = is_x >= s_width - 1 ? s_width - 1 : is_x;
 	//is_x = is_x >= s_width - 1 ? s_width - 1 : is_x;
 	x = s_x - (float)is_x;
 
@@ -456,10 +465,12 @@ float cal_bicubic_kernel(const float *data, float s_x, float s_y, DWORD s_width,
 
 	float result = 0;
 
+	/*
 	float sum = 0;
 	for (int i = 0; i < 4; ++i)
 		for (int j = 0; j < 4; ++j)
 			sum += c_i_[i]*c_j_[j];
+	*/
 
 	//store neighbour value into Omeiga
 	int index = (is_y*s_width + is_x) * 16;
@@ -483,12 +494,15 @@ float nearest_neighbour(const float *f_data, float s_x, float s_y, DWORD s_width
 	is_y = floor(s_y);
 	is_y = s_y - (float)is_y >= 0.5 ? (is_y + 1) : is_y;
 	//is_y = is_y <= 0 ? 1 : is_y;
-	//is_y = is_y <= 0 ? 0 : is_y;
+	is_y = is_y <= 0 ? 0 : is_y;
+	is_y = is_y >= s_height - 1 ?  s_height - 1 : is_y;
 
 	is_x = floor(s_x);
 	is_x = s_x - (float)is_x >= 0.5 ? (is_x + 1) : is_x;
 	//is_x = is_x >= s_width - 1 ? s_width - 2 : is_x;
 	//is_x = is_x >= s_width - 1 ? s_width - 1 : is_x;
+	is_x = is_x <= 0 ? 0 : is_x;
+	is_x = is_x >= s_width - 1 ? s_width - 1 : is_x;
 
 	int location = (is_y+2)*(s_width+4) + is_x + 2;
 
@@ -500,20 +514,429 @@ float bilinear(const float* f_data, float s_x, float s_y, DWORD s_width, DWORD s
 	float f_y0_x0, f_y0_x1, f_y1_x0, f_y1_x1;
 	float f_y0, f_y1, f_inter;
 
+	/*
 	y_0 = floor(s_y);
+	//y_0 = y_0 <= 0 ? 0 : y_0;
+	//y_0 = y_0 >= s_height-1 ? s_height-1 : y_0;
 	y_1 = y_0 + 1;
 
+
 	x_0 = floor(s_x);
+	//x_0 = x_0 <= 0 ? 0 : x_0;
+	//x_0 = x_0 >= s_width - 1 ? s_width - 1 : x_0;
 	x_1 = x_0 + 1;
+	*/
+
+	float dx, dy;
+
+	//
+	y_0 = floor(s_y);
+	if (y_0 < 0) {
+		y_0 = 0;
+		dy = 0;
+	}
+	else if (y_0 > s_height - 1) {
+		y_0 = s_height - 1;
+		dy = 0;
+	}
+	else dy = s_y - float(y_0);
+	y_1 = y_0 + 1;
+
+
+	x_0 = floor(s_x);
+	if (x_0 < 0) {
+		x_0 = 0;
+		dx = 0;
+	}
+	else if (x_0 > s_width - 1) {
+		x_0 = s_width - 1;
+		dx = 0;
+	}
+	else
+		dx = s_x - float(x_0);
+	x_1 = x_0 + 1;
+	//
 
 	f_y0_x0 = f_data[(y_0+2)*(s_width + 4) + (x_0 + 2)];
 	f_y0_x1 = f_data[(y_0+2)*(s_width + 4) + (x_1 + 2)];
 	f_y1_x0 = f_data[(y_1+2)*(s_width + 4) + (x_0 + 2)];
 	f_y1_x1 = f_data[(y_1+2)*(s_width + 4) + (x_1 + 2)];
 
+	f_y0 = f_y0_x0 + (dx)*(f_y0_x1 - f_y0_x0);
+	f_y1 = f_y1_x0 + (dx)*(f_y1_x1 - f_y1_x0);
+	f_inter = f_y0 + (dy)*(f_y1 - f_y0);
+
+	return f_inter;
+}
+
+void wad_coeff(const float *Imdata, float * coeff, DWORD s_width, DWORD s_height) {
+#define ABS(a) ((a)<0?-(a):(a))
+	for (int i = 0; i < s_height; ++i) {
+		for (int j = 0; j < s_width; ++j) {
+			float *A = coeff + (i*s_width + j)*2 ;
+			float f_y0_x1, f_y0_x_1, f_y0_x2, f_y0_x0;
+			float f_y1_x0, f_y_1_x0, f_y2_x0;
+
+			f_y0_x0 = Imdata[(i + 2)*(s_width + 4) + (j + 2)];
+			f_y0_x1 = Imdata[(i + 2)*(s_width + 4) + (j + 3)];
+			f_y1_x0 = Imdata[(i + 3)*(s_width + 4) + (j + 2)];
+
+			f_y0_x2 = Imdata[(i + 2)*(s_width + 4) + (j + 4)];
+			f_y0_x_1 = Imdata[(i + 2)*(s_width + 4) + (j + 1)];
+
+			f_y2_x0 = Imdata[(i + 4)*(s_width + 4) + (j + 2)];
+			f_y_1_x0 = Imdata[(i + 1)*(s_width + 4) + (j + 2)];
+
+			A[0] = (ABS(f_y0_x1 - f_y0_x_1) - ABS(f_y0_x2 - f_y0_x0)) / 255;
+			A[1] = (ABS(f_y1_x0 - f_y_1_x0) - ABS(f_y2_x0 - f_y0_x0)) / 255;
+		}
+	}
+}
+
+float wad_bilinear(const float* f_data, const float* coeff, float s_x, float s_y, DWORD s_width, DWORD s_height) {
+	int y_0, x_0, y_1, x_1;
+	float f_y0_x0, f_y0_x1, f_y1_x0, f_y1_x1;
+	float f_y0, f_y1, f_inter;
+
+	float dx, dy;
+	
+	y_0 = floor(s_y);
+	if (y_0 < 0) {
+		y_0 = 0;
+		dy = 0;
+	}
+	else if (y_0 > s_height-1 ) {
+		y_0 = s_height - 1;
+		dy = 0;
+	}
+	else dy = s_y - float(y_0);
+	y_1 = y_0 + 1;
+
+
+	x_0 = floor(s_x);
+	if (x_0 < 0) {
+		x_0 = 0;
+		dx = 0;
+	}
+	else if (x_0 > s_width - 1) {
+		x_0 = s_width - 1;
+		dx = 0;
+	}
+	else 
+		dx = s_x - float(x_0);
+	x_1 = x_0 + 1;
+	
+
+	/*
+	y_0 = floor(s_y);
+	y_0 = y_0 <= 0 ? 0 : y_0;
+	y_0 = y_0 >= s_height - 1 ? s_height - 1 : y_0;
+	y_1 = y_0 + 1;
+
+	x_0 = floor(s_x);
+	x_0 = x_0 <= 0 ? 0 : x_0;
+	x_0 = x_0 >= s_width - 1 ? s_width - 1 : x_0;
+	x_1 = x_0 + 1;
+	*/
+
+	f_y0_x0 = f_data[(y_0 + 2)*(s_width + 4) + (x_0 + 2)];
+	f_y0_x1 = f_data[(y_0 + 2)*(s_width + 4) + (x_1 + 2)];
+	f_y1_x0 = f_data[(y_1 + 2)*(s_width + 4) + (x_0 + 2)];
+	f_y1_x1 = f_data[(y_1 + 2)*(s_width + 4) + (x_1 + 2)];
+
+	/* cal warped distance */
+	float x_, y_;
+	float A_x, A_y;
+	float k = 5.5;
+/*
+	float f_y0_x2, f_y0_x_1, f_y2_x0, f_y_1_x0;
+
+	f_y0_x2 = f_data[(y_0 + 2)*(s_width + 4) + (x_1 + 3)];
+	f_y0_x_1 = f_data[(y_0 + 2)*(s_width + 4) + (x_0 + 1)];
+
+	f_y2_x0 = f_data[(y_1 + 3)*(s_width + 4) + (x_0 + 2)];
+	f_y_1_x0 = f_data[(y_0 + 1)*(s_width + 4) + (x_0 + 2)];
+
+#define ABS(a) ((a)<0?-(a):(a))
+
+	A_x = (ABS(f_y0_x1 - f_y0_x_1) - ABS(f_y0_x2 - f_y0_x0))/255;
+	A_y = (ABS(f_y1_x0 - f_y_1_x0) - ABS(f_y2_x0 - f_y0_x0))/255;
+*/
+	A_x = coeff[(y_0*(int)s_width+x_0)*2];
+	A_y = coeff[(y_0*(int)s_width + x_0) * 2+1];
+	//x_ = s_x - (float)x_0;
+	x_ = dx;
+	x_ = x_ - k*A_x*x_*(x_ - 1);
+	//y_ = s_y - (float)y_0;
+	y_ = dy;
+	y_ = y_ - k*A_y*y_*(y_ - 1);
+
+	x_ = x_ > 1 ? 1 : x_;
+	x_ = x_ < 0 ? 0 : x_;
+
+	y_ = y_ > 1 ? 1 : y_;
+	y_ = y_ < 0 ? 0 : y_;
+	/* until here */
+	/*
 	f_y0 = f_y0_x0 + (s_x - (float)x_0)*(f_y0_x1 - f_y0_x0);
 	f_y1 = f_y1_x0 + (s_x - (float)x_0)*(f_y1_x1 - f_y1_x0);
 	f_inter = f_y0 + (s_y - (float)y_0)*(f_y1 - f_y0);
+	*/
+
+	f_y0 = f_y0_x0 + (x_)*(f_y0_x1 - f_y0_x0);
+	f_y1 = f_y1_x0 + (x_)*(f_y1_x1 - f_y1_x0);
+	f_inter = f_y0 + (y_)*(f_y1 - f_y0);
+
+	return f_inter;
+}
+
+void ada_coeff(const float *f_data, float * coeff, DWORD s_width, DWORD s_height) {
+
+	float a = 0.05;
+	float
+		f_y_1_x0, f_y_1_x1,
+		f_y0_x_1, f_y0_x0, f_y0_x1, f_y0_x2,
+		f_y1_x_1, f_y1_x0, f_y1_x1, f_y1_x2,
+		f_y2_x0, f_y2_x1;
+	for (int i = 0; i < s_height; ++i) {
+		for (int j = 0; j < s_width; ++j) {
+			float *H = coeff + (i*s_width + j) * 4;
+			/**/
+			f_y_1_x0 = f_data[(i + 1)*(s_width + 4) + (j + 2)];
+			f_y_1_x1 = f_data[(i + 1)*(s_width + 4) + (j + 3)];
+
+			f_y0_x_1 = f_data[(i + 2)*(s_width + 4) + (j + 1)];
+			f_y0_x0 = f_data[(i + 2)*(s_width + 4) + (j + 2)];
+			f_y0_x1 = f_data[(i + 2)*(s_width + 4) + (j + 3)];
+			f_y0_x2 = f_data[(i + 2)*(s_width + 4) + (j + 4)];
+
+			f_y1_x_1 = f_data[(i + 3)*(s_width + 4) + (j + 1)];
+			f_y1_x0 = f_data[(i + 3)*(s_width + 4) + (j + 2)];
+			f_y1_x1 = f_data[(i + 3)*(s_width + 4) + (j + 3)];
+			f_y1_x2 = f_data[(i + 3)*(s_width + 4) + (j + 4)];
+
+			f_y2_x0 = f_data[(i + 4)*(s_width + 4) + (j + 2)];
+			f_y2_x1 = f_data[(i + 4)*(s_width + 4) + (j + 3)];
+			/**/
+
+#define ABS(a) ((a)<0?-(a):(a))
+			H[0] = 1.0 / sqrtf(1 + a*(ABS(f_y0_x0 - f_y0_x_1) + ABS(f_y1_x0 - f_y1_x_1)));
+			H[1] = 1.0 / sqrtf(1 + a*(ABS(f_y0_x1 - f_y0_x2) + ABS(f_y1_x1 - f_y1_x2)));
+			H[2] = 1.0 / sqrtf(1 + a*(ABS(f_y0_x0 - f_y_1_x0) + ABS(f_y0_x1 - f_y_1_x1)));
+			H[3] = 1.0 / sqrtf(1 + a*(ABS(f_y1_x0 - f_y2_x0) + ABS(f_y1_x1 - f_y2_x1)));
+		}
+	}
+}
+
+float ada_bilinear(const float* f_data, const float* coeff , float s_x, float s_y, DWORD s_width, DWORD s_height) {
+	int y_0, x_0, y_1, x_1;
+	float 
+		f_y_1_x0, f_y_1_x1,
+		f_y0_x_1, f_y0_x0, f_y0_x1, f_y0_x2,
+		f_y1_x_1, f_y1_x0, f_y1_x1, f_y1_x2,
+		f_y2_x0, f_y2_x1;
+	float Hl, Hr, Vu, Vl;
+	float w0v, w0h, w1h, w1v;
+	float Dh, Dv;
+	float s, t;
+	float a = 0.05;
+	float  f_inter;
+
+	/*
+	y_0 = floor(s_y);
+	y_1 = y_0 + 1;
+
+	x_0 = floor(s_x);
+	x_1 = x_0 + 1;
+	*/
+
+	//
+
+	float dx, dy;
+
+	y_0 = floor(s_y);
+	if (y_0 < 0) {
+		y_0 = 0;
+		dy = 0;
+	}
+	else if (y_0 > s_height - 1) {
+		y_0 = s_height - 1;
+		dy = 0;
+	}
+	else dy = s_y - float(y_0);
+	y_1 = y_0 + 1;
+
+
+	x_0 = floor(s_x);
+	if (x_0 < 0) {
+		x_0 = 0;
+		dx = 0;
+	}
+	else if (x_0 > s_width - 1) {
+		x_0 = s_width - 1;
+		dx = 0;
+	}
+	else
+		dx = s_x - float(x_0);
+	x_1 = x_0 + 1;
+	//
+
+	//t = s_y - (float)y_0;
+	//s = s_x - float(x_0);
+	t = dy;
+	s = dx;
+
+	/*
+	f_y_1_x0 = f_data[(y_0 + 1)*(s_width + 4) + (x_0 + 2)];
+	f_y_1_x1 = f_data[(y_0 + 1)*(s_width + 4) + (x_1 + 2)];
+
+	f_y0_x_1 = f_data[(y_0 + 2)*(s_width + 4) + (x_0 + 1)];
+	f_y0_x0 = f_data[(y_0 + 2)*(s_width + 4) + (x_0 + 2)];
+	f_y0_x1 = f_data[(y_0 + 2)*(s_width + 4) + (x_1 + 2)];
+	f_y0_x2 = f_data[(y_0 + 2)*(s_width + 4) + (x_1 + 3)];
+
+	f_y1_x_1 = f_data[(y_1 + 2)*(s_width + 4) + (x_0 + 1)];
+	f_y1_x0 = f_data[(y_1 + 2)*(s_width + 4) + (x_0 + 2)];
+	f_y1_x1 = f_data[(y_1 + 2)*(s_width + 4) + (x_1 + 2)];
+	f_y1_x2 = f_data[(y_1 + 2)*(s_width + 4) + (x_1 + 3)];
+
+	f_y2_x0 = f_data[(y_1 + 3)*(s_width + 4) + (x_0 + 2)];
+	f_y2_x1 = f_data[(y_1 + 3)*(s_width + 4) + (x_1 + 2)];
+
+
+#define ABS(a) ((a)<0?-(a):(a))
+	Hl = 1.0 / sqrtf(1 + a*(ABS(f_y0_x0- f_y0_x_1) + ABS(f_y1_x0- f_y1_x_1)));
+	Hr = 1.0 / sqrtf(1 + a*(ABS(f_y0_x1- f_y0_x2) + ABS(f_y1_x1- f_y1_x2)));
+	Vu = 1.0 / sqrtf(1 + a*(ABS(f_y0_x0- f_y_1_x0) + ABS(f_y0_x1- f_y_1_x1)));
+	Vl = 1.0 / sqrtf(1 + a*(ABS(f_y1_x0- f_y2_x0) + ABS(f_y1_x1- f_y2_x1)));
+	*/
+	
+	f_y0_x0 = f_data[(y_0 + 2)*(s_width + 4) + (x_0 + 2)];
+	f_y0_x1 = f_data[(y_0 + 2)*(s_width + 4) + (x_1 + 2)];
+
+	f_y1_x0 = f_data[(y_1 + 2)*(s_width + 4) + (x_0 + 2)];
+	f_y1_x1 = f_data[(y_1 + 2)*(s_width + 4) + (x_1 + 2)];
+
+	Hl = coeff[(y_0*(int)s_width + x_0) * 4];
+	Hr = coeff[(y_0*(int)s_width + x_0) * 4+1];
+	Vu = coeff[(y_0*(int)s_width + x_0) * 4+2];
+	Vl = coeff[(y_0*(int)s_width + x_0) * 4+3];
+	
+
+
+	Dh = Hl*(1-s)+Hr*s;
+	Dv = Vu*(1-t)+Vl*t;
+	w0h = Hl*(1-s)/Dh;
+	w1h = Hr*s/Dh;
+	w0v = Vu*(1-t)/Dv;
+	w1v = Vl*t/Dv;
+
+	f_inter = w0v*(w0h*f_y0_x0 + w1h*f_y0_x1) + w1v*(w0h*f_y1_x0 + w1h*f_y1_x1);
+
+	return f_inter;
+}
+
+float cfls_bilinear(const float* f_data, float s_x, float s_y, DWORD s_width, DWORD s_height) {
+	int y_0, x_0, y_1, x_1;
+	float f_y0_x0, f_y0_x1, f_y1_x0, f_y1_x1;
+	float f_y0_x_1, f_y0_x2, f_y_1_x0, f_y2_x0;
+	float f_y0, f_y1, f_inter;
+
+	/*
+	y_0 = floor(s_y);
+	y_1 = y_0 + 1;
+
+	x_0 = floor(s_x);
+	x_1 = x_0 + 1;
+	*/
+
+	/*
+	y_0 = floor(s_y);
+	y_0 = y_0 <= 0 ? 0 : y_0;
+	y_0 = y_0 >= s_height - 1 ? s_height - 1 : y_0;
+	y_1 = y_0 + 1;
+
+	x_0 = floor(s_x);
+	x_0 = x_0 <= 0 ? 0 : x_0;
+	x_0 = x_0 >= s_width - 1 ? s_width - 1 : x_0;
+	x_1 = x_0 + 1;
+	*/
+	float dx, dy;
+
+	y_0 = floor(s_y);
+	if (y_0 < 0) {
+		y_0 = 0;
+		dy = 0;
+	}
+	else if (y_0 > s_height - 1) {
+		y_0 = s_height - 1;
+		dy = 0;
+	}
+	else dy = s_y - float(y_0);
+	y_1 = y_0 + 1;
+
+
+	x_0 = floor(s_x);
+	if (x_0 < 0) {
+		x_0 = 0;
+		dx = 0;
+	}
+	else if (x_0 > s_width - 1) {
+		x_0 = s_width - 1;
+		dx = 0;
+	}
+	else
+		dx = s_x - float(x_0);
+	x_1 = x_0 + 1;
+
+	f_y0_x_1= f_data[(y_0 + 2)*(s_width + 4) + (x_0 + 1)];
+	f_y0_x0 = f_data[(y_0 + 2)*(s_width + 4) + (x_0 + 2)];
+	f_y0_x1 = f_data[(y_0 + 2)*(s_width + 4) + (x_1 + 2)];
+	f_y0_x2 = f_data[(y_0 + 2)*(s_width + 4) + (x_1 + 3)];
+
+	f_y_1_x0 = f_data[(y_0 + 1)*(s_width + 4) + (x_0 + 2)];
+	f_y1_x0 = f_data[(y_1 + 2)*(s_width + 4) + (x_0 + 2)];
+	f_y2_x0 = f_data[(y_1 + 3)*(s_width + 4) + (x_0 + 2)];
+	f_y1_x1 = f_data[(y_1 + 2)*(s_width + 4) + (x_1 + 2)];
+
+	/**/
+	float x_, y_, s;
+	float c0, c1, c2, c3;
+
+	//s = s_x - (float)x_0;
+	s = dx;
+	c0 = (1-s)*(f_y0_x1- f_y0_x0);
+	c1 = s*(1-s)*(f_y0_x_1 -f_y0_x0);
+	c2 = s*(f_y0_x1 - f_y0_x0);
+	c3 = s*(f_y0_x0 - (2-s)*f_y0_x1 +(1-s)*f_y0_x2);
+	if (c0 + c2 != 0) {
+		x_ = -1.0*(c1 + c3) / (c2 + c0);
+		x_ = x_ < 0 ? 0 : x_;
+		x_ = x_ > 1 ? 1 : x_;
+	}
+	else
+		x_ = s;
+
+	//s = s_y - (float)y_0;
+	s = dy;
+	c0 = (1 - s)*(f_y1_x0 - f_y0_x0);
+	c1 = s*(1 - s)*(f_y_1_x0 - f_y0_x0);
+	c2 = s*(f_y1_x0 - f_y0_x0);
+	c3 = s*(f_y0_x0 - (2 - s)*f_y1_x0 + (1 - s)*f_y2_x0);
+
+	if (c0 + c2 != 0) {
+		y_ = -1.0*(c1 + c3) / (c2 + c0);
+		y_ = y_ < 0 ? 0 : y_;
+		y_ = y_ > 1 ? 1 : y_;
+	}
+	else
+		y_ = s;
+
+	/**/
+
+	f_y0 = f_y0_x0 + x_*(f_y0_x1 - f_y0_x0);
+	f_y1 = f_y1_x0 + x_*(f_y1_x1 - f_y1_x0);
+	f_inter = f_y0 + y_*(f_y1 - f_y0);
 
 	return f_inter;
 }
@@ -608,30 +1031,61 @@ void interpolation(const uint8_t *s_data, uint8_t *d_data, DWORD s_width, DWORD 
 		kernel_coeff(f_data, coeff, s_width, s_height);
 	}
 	//nearest neighbour\ bilinear
-	else
-		;
+	else if (MODE == MODE_WAD_BILINEAR) {
+		clock_t gen_start = clock();
+		coeff = (float*)malloc(sizeof(float)*s_width*s_height * 2);
+		wad_coeff(f_data, coeff, s_width, s_height);
+
+		clock_t gen_end = clock();
+		double gen_duration = gen_end - gen_start;
+		std::cout << "time of constructing coefficient: "
+			<< gen_duration / CLOCKS_PER_SEC << std::endl;
+	}
+	else if (MODE == MODE_ADA_BILINEAR) {
+		clock_t gen_start = clock();
+		coeff = (float*)malloc(sizeof(float)*s_width*s_height * 4);
+		ada_coeff(f_data, coeff, s_width, s_height);
+
+		clock_t gen_end = clock();
+		double gen_duration = gen_end - gen_start;
+		std::cout << "time of constructing coefficient: "
+			<< gen_duration / CLOCKS_PER_SEC << std::endl;
+	}
+	else	;
 
 	uint8_t *output = d_data;
 	float s_x, s_y;
 	float temp;
+
 	for (int i = 0; i < d_height; ++i) {
 		//destination y ->  source y
-		s_y = (float)i / (float)(d_height - 1) * (float)(s_height - 1);
+		//s_y = (float)i / (float)(d_height - 1) * (float)(s_height - 1);
+		s_y = (float)(i + 1) / height_scale + 0.5*(1.0-1.0/height_scale) -1;
+		//if (s_y > 255 || s_y <0)
+		//	break;
+
 		for (int j = 0; j < d_width; ++j) {
 			//destination x -> source x
-			s_x = (float)j / (float)(d_width - 1) * (float)(s_width - 1);
-
+			//s_x = (float)j / (float)(d_width - 1) * (float)(s_width - 1);
+			s_x = float(j + 1) / width_scale + 0.5*(1.0 - 1.0 / width_scale) -1 ;
 			if (MODE == MODE_BICUBIC || MODE == MODE_SPLINE)
-				temp = cal_bicubic(coeff, s_x, s_y, s_width, s_height);
+				temp = cal_bicubic(coeff, s_x, s_y, s_width, s_height,MODE);
 			//else if (MODE == MODE_BC_KERNEL || MODE == MODE_LANCZOS_KERNEL)
-			else if(a != nullptr)
+			else if (a != nullptr)
 				//temp = cal_bicubic_kernel(f_data, s_x, s_y, s_width, s_height, a, MODE);
 				temp = cal_bicubic_kernel(coeff, s_x, s_y, s_width, s_height, a, MODE);
 			else if (MODE == MODE_NEAREST_NEIGHBOUR)
 				temp = nearest_neighbour(f_data, s_x, s_y, s_width, s_height);
 			else if (MODE == MODE_BILINEAR)
 				temp = bilinear(f_data, s_x, s_y, s_width, s_height);
-
+			else if (MODE == MODE_WAD_BILINEAR)
+				temp = wad_bilinear(f_data, coeff, s_x, s_y, s_width, s_height);
+			else if (MODE == MODE_ADA_BILINEAR)
+				temp = ada_bilinear(f_data, coeff, s_x, s_y, s_width, s_height);
+			else if (MODE == MODE_CFLS_BILINEAR)
+				temp = cfls_bilinear(f_data, s_x, s_y, s_width, s_height);
+			
+			temp += 0.5;
 			if (temp >= 255)
 				temp = 255.0;
 			else if (temp <= 0)
